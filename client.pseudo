@@ -1,0 +1,37 @@
+
+function client(dstAddr, dstPort, msgSize, connID, simulatedLossRate, maxAllowedThroughput)
+    checkinputformat()
+    resolve(dstAddrAndPort)
+    
+    if (simulatedLossRate > 0)
+        randomDropData(simulatedLossRate)
+
+    sock = opensocket();
+
+    start = contrustControlMsg(start)
+    while(1)
+        send(start)
+        waitforControlMsg(ok)
+        if checkTimeout(10s)
+            count += 1
+            if count >= 10:
+                exitAndAlert()
+            else
+                contiune
+        break
+
+    //after recvived 'ok'
+    dataMsg = contrustDataMsg(seqNum, currTime, currRTT)
+
+
+
+        
+
+
+
+
+
+    
+    
+
+
