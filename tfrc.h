@@ -1,8 +1,8 @@
 /*********************************************************
 *
-* Module Name: TCPF client/server header file
+* Module Name: tfrc client/server header file
 *
-* File Name:    TCPF.h	
+* File Name:    tfrc.h	
 *
 * Summary:
 *  This file contains common stuff for the client and server
