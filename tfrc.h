@@ -37,7 +37,7 @@ struct control_t {
     uint32_t msgLength; /* Msg Length */
     uint16_t msgType;   /* Msg Type */
     uint16_t code;      /* Code */
-    uint32_t CxID;      
+    uint32_t CxID;      /* connection ID */
     uint32_t seqNum;    /* Sequence Number*/
     uint32_t msgSize    /* Send Msg Size */
 }   
@@ -47,7 +47,7 @@ struct data_t {
     uint32_t msgLength; /* Msg Length */
     uint16_t msgType;   /* Msg Type */
     uint16_t code;      /* Code */
-    uint32_t CxID;      /* */
+    uint32_t CxID;      /* connection ID */
     uint32_t seqNum;    /* Sequence Number */
     uint32_t timeStamp; /* TimeStamp */
     uint32_t RTT;       /* Sender's RTT Estimate (in microsecond) */
@@ -59,7 +59,7 @@ struct ACK_t {
     uint32_t msgLength; /* Msg Length */
     uint16_t msgType;   /* Msg Type */
     uint16_t code;      /* Code */
-    uint32_t CxID;      /* */
+    uint32_t CxID;      /* connection ID */
     uint32_t ackNum;    /* ACK Number */
     uint32_t timeStamp; /* TimeStamp */
     uint32_t T_delay;   /* T_delay (in microsecond) */
