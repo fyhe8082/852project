@@ -34,34 +34,34 @@
 
 /* Considered as Control Message */
 struct control_t {
-    uint32_t msgLength; /* Msg Length */
-    uint16_t msgType;   /* Msg Type */
-    uint16_t code;      /* Code */
+    uint16_t msgLength; /* Msg Length */
+    uint8_t msgType;   /* Msg Type */
+    uint8_t code;      /* Code */
     uint32_t CxID;      /* connection ID */
     uint32_t seqNum;    /* Sequence Number*/
-    uint32_t msgSize    /* Send Msg Size */
+    uint16_t msgSize    /* Send Msg Size */
 }   
 
 /* Considered as Data Message Format */
 struct data_t {
-    uint32_t msgLength; /* Msg Length */
-    uint16_t msgType;   /* Msg Type */
-    uint16_t code;      /* Code */
+    uint16_t msgLength; /* Msg Length */
+    uint8_t msgType;   /* Msg Type */
+    uint8_t code;      /* Code */
     uint32_t CxID;      /* connection ID */
     uint32_t seqNum;    /* Sequence Number */
-    uint32_t timeStamp; /* TimeStamp */
+    uint64_t timeStamp; /* TimeStamp */
     uint32_t RTT;       /* Sender's RTT Estimate (in microsecond) */
     uint8_t  X[0];      /* Holds Msg Data */
 }
 
 /* Considered as ACK Message Format */
 struct ACK_t {
-    uint32_t msgLength; /* Msg Length */
-    uint16_t msgType;   /* Msg Type */
-    uint16_t code;      /* Code */
+    uint16_t msgLength; /* Msg Length */
+    uint8_t msgType;   /* Msg Type */
+    uint8_t code;      /* Code */
     uint32_t CxID;      /* connection ID */
     uint32_t ackNum;    /* ACK Number */
-    uint32_t timeStamp; /* TimeStamp */
+    uint64_t timeStamp; /* TimeStamp */
     uint32_t T_delay;   /* T_delay (in microsecond) */
     uint32_t lossRate;  /* Loss Event Rate */
     uint32_t recvRate;  /* Receive Rate (in bits per second) */
