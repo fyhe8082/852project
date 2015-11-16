@@ -43,7 +43,7 @@ void sendOk(int sock, struct sockaddr_in *server, uint16_t msgLength, uint32_t C
     ok->msgSize = msgSize;
     /* start to send.. */
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t)){
-        DiewithError("sendto() sent a different number of bytes than expected");
+        DieWithError("sendto() sent a different number of bytes than expected");
     }
    
 }

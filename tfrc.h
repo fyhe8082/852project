@@ -43,8 +43,8 @@ struct control_t {
     uint8_t code;      /* Code */
     uint32_t CxID;      /* connection ID */
     uint32_t seqNum;    /* Sequence Number*/
-    uint16_t msgSize    /* Send Msg Size */
-}   
+    uint16_t msgSize;    /* Send Msg Size */
+};   
 
 /* Considered as Data Message Format */
 struct data_t {
