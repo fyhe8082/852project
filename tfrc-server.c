@@ -1,17 +1,17 @@
 /*********************************************************
-*
-* Module Name: tfrc server 
-*
-* File Name:    tfrc-server.c	
-*
-* Summary:
-*  This file contains the echo server code
-*
-* Revisions:
-*  Created by Fangyu He for CPSC 8520, Fall 2015
-*   School of Computing,  Clemson University
-*
-*********************************************************/
+ *
+ * Module Name: tfrc server 
+ *
+ * File Name:    tfrc-server.c	
+ *
+ * Summary:
+ *  This file contains the echo server code
+ *
+ * Revisions:
+ *  Created by Fangyu He for CPSC 8520, Fall 2015
+ *   School of Computing,  Clemson University
+ *
+ *********************************************************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -19,10 +19,32 @@
 #include <sys/time.h>
 #include "tfrc.h"
 
-static struct control_t *start = NULL;
+static struct control_t *buffer = NULL;
 static struct control_t *ok = NULL;
 static struct data_t *data = NULL;
 static struct ACK_t *dataAck = NULL;
+static uint32_t CxID;
+static uint32_t lossRate;
+static uint32_t recvRate;
+
+struct logEntry {
+    struct data_t packet;
+    uint64_t timeArrived;
+};
+
+typedef struct Queue
+{
+    struct logEntry *qBase;
+    int front;
+    int rear;
+}QUEUE;
+
+void initQueue(QUEUE *pq);
+void enQueue(QUEUE *pq , struct logEntry value);
+bool isemptyQueue(QUEUE *pq);
+bool is_fullQueue(QUEUE *pq);
+void deQueue(QUEUE *pq , struct logEntry *value);
+void traverseQueue( QUEUE *pq);
 
 void sigHandler(int);
 char Version[] = "1.1";
@@ -33,19 +55,20 @@ char Version[] = "1.1";
  *  bsize   :   echo the Bisze from client
  *
  * */
-void sendOk(int sock, struct sockaddr_in *server, uint16_t msgLength, uint32_t CxID, uint32_t seqNum, uint16_t msgSize)
+void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgSize)
 {
-    ok->msgLength = msgLength;
+    ok->msgLength = CONT_LEN;
     ok->msgType = CONTROL;
     ok->code = OK;
     ok->CxID = CxID;
     ok->seqNum = seqNum;
     ok->msgSize = msgSize;
     /* start to send.. */
-    if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t)){
+    if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
+    {
         DieWithError("sendto() sent a different number of bytes than expected");
     }
-   
+
 }
 
 
@@ -55,7 +78,23 @@ void sendOk(int sock, struct sockaddr_in *server, uint16_t msgLength, uint32_t C
  *  bsize   :   echo the Bisze from client
  *
  * */
-void sendDataAck(int sock);
+void sendDataAck(int sock,struct sockaddr_in *server)
+{   
+    dataAck->msgLength = ACK_LEN;
+    dataAck->msgType = ACK;
+    dataAck->code = OK;
+    dataAck->CxID = CxID;
+    dataAck->ackNum = ackNum;
+    dataAck->timeStamp = timeStamp;
+    dataAck->T_delay = T_delay;
+    dataAck->lossRate = lossRate;
+    dataAck->recvRate = recvRate;
+    /* start to send.. */
+    if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
+    {
+        DieWithError("sendto() sent a different number of bytes than expected");
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -70,18 +109,19 @@ int main(int argc, char *argv[])
     /* addr&port bind with */
     unsigned long bindIP;
     unsigned short bindPort;
-    
+
 
     /* client var */
     struct sockaddr_in clntAddr; /* Client address */
     unsigned int cliAddrLen;     /* Length of incoming message */
     int recvMsgSize;             /* Size of received message */
-    struct control_t *buffer = NULL; /* store received packet*/
 
     /* packets var */
-    uint16_t msgType = 0;
-    uint16_t code = 0;
-   
+    uint8_t msgType;
+    uint8_t code;
+    int isNewLoss = 0;           /* flag for if new Loss event occur*/
+
+
     /* Check for correct number of parameters */ 
     if (argc >= 2)
     {
@@ -131,8 +171,8 @@ int main(int argc, char *argv[])
         }
 
         /* Parsing the packet */
-        msgType = ntohs(buffer -> msgType);
-        code = ntohs(buffer -> code);
+        msgType = buffer -> msgType;
+        code = buffer -> code;
         switch (msgType) 
         {
             case CONTROL : 
@@ -140,45 +180,64 @@ int main(int argc, char *argv[])
                     switch (code)
                     {
                         case START :
-                        {
-                            if (bindFlag == 0)
                             {
-                                bindFlag = 1;
-                                bindPort = (struct sockaddr *)&clntAddr.sin_port;
-                                bindIP = (struct sockaddr *)&clntAddr.sin_addr.s_addr;
-                                bindMsgSize = ntohl(buffer->msgSize);
-                                sendOk(sock, &clntAddr, 
-                                    buffer->msgLength,
-                                    buffer->CxID,
-                                    buffer->seqNum,
-                                    buffer->msgSize
-                                    );
+                                if (bindFlag == 0)
+                                {
+                                    bindFlag = 1;
+                                    bindPort = (struct sockaddr *)&clntAddr.sin_port;
+                                    bindIP = (struct sockaddr *)&clntAddr.sin_addr.s_addr;
+                                    CxID = buffer->CxID;
+                                    bindMsgSize = ntohl(buffer->msgSize);
+                                    sendOk(sock, &clntAddr, 
+                                            buffer->seqNum,
+                                            buffer->msgSize
+                                          );
+                                    printf("start:\n");
+                                    printf("length:%d\n", ntohs(buffer->msgLength));
+                                    printf("type:%d\n", (int)buffer->msgType);
+                                    printf("code:%d\n", (int)buffer->code);
+                                    printf("Cxid:%d\n", ntohl(buffer->CxID));
+                                    printf("Seq#:%d\n", ntohl(buffer->seqNum));
+                                    printf("size:%d\n", ntohs(buffer->msgSize));
+                                }
+                                break;
                             }
-                            break;
-                        }
                         case STOP :
-                        {
-                            if (bindFlag == 1 
-                                    && bindIP == (struct sockaddr *)&clntAddr.sin_addr.s_addr
-                                    && bindPort == (struct sockaddr *)&clntAddr.sin_port)
                             {
-                                sendOk(sock, &clntAddr, 
-                                    buffer->msgLength,
-                                    buffer->CxID,
-                                    buffer->seqNum,
-                                    buffer->msgSize
-                                    );
-                                //display();
+                                if (bindFlag == 1 
+                                        && bindIP == (struct sockaddr *)&clntAddr.sin_addr.s_addr
+                                        && bindPort == (struct sockaddr *)&clntAddr.sin_port)
+                                {
+                                    printf("STOP msg received!\n\n");
+                                    sendOk(sock, &clntAddr, 
+                                            buffer->seqNum,
+                                            buffer->msgSize
+                                          );
+                                    //display();
+                                }
+                                break;
                             }
-                            break;
-                        }
                         default : break;
                     }
-                        
+
                     break;
                 }
             case DATA :
                 {
+                    if (bindFlag == 1 
+                            && bindIP == (struct sockaddr *)&clntAddr.sin_addr.s_addr
+                            && bindPort == (struct sockaddr *)&clntAddr.sin_port)
+                    {
+                        printf("data recv\n");
+                        
+                        data = (data_t *)buffer;
+                        if(isNewLoss == 1)
+                        {
+
+                            sendDataAck(sock, &clntAddr);
+                        }
+                    }
+
                     break;
                 }
 
