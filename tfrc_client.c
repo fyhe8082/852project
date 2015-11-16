@@ -1,5 +1,5 @@
 /*************************************************************************
-    > File Name: tfrc_client.c
+    > File Name: client.c
     > Author: Xubin Zhuge
     > Mail: xzhuge@clemson.edu 
     > Created Time: Sun 07 Nov 2015 06:46:18 PM EST
@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sys/type.h>
 #include "tfrc_client.h"
 
 int main(int argc, char *argv[]) {
@@ -25,15 +24,16 @@ int main(int argc, char *argv[]) {
 	tfrc_client.simulatedLossRate = atoi(argv[5]);
 	tfrc_client.maxAllowedThroughput = atoi(argv[6]);
 
-	while(true) {
-		switch(clientStatus) {
+	while(1) {
+		switch(cStatus) {
 		case CLIENT_START:
 			
-
+			break;
 		case CLIENT_SENDING:
 
-
+		break;
 		case CLIENT_STOP:
+			break;
 		}
 	}
 }
