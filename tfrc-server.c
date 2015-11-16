@@ -158,6 +158,18 @@ int main(int argc, char *argv[])
                         }
                         case STOP :
                         {
+                            if (bindFlag == 1 
+                                    && bindIP == (struct sockaddr *)&clntAddr.sin_addr.s_addr
+                                    && bindPort == (struct sockaddr *)&clntAddr.sin_port)
+                            {
+                                sendOk(sock, &clntAddr, 
+                                    buffer->msgLength,
+                                    buffer->CxID,
+                                    buffer->seqNum,
+                                    buffer->msgSize
+                                    );
+                                //display();
+                            }
                             break;
                         }
                         default : break;
