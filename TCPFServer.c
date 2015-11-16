@@ -12,6 +12,8 @@
 *   School of Computing,  Clemson University
 *
 *********************************************************/
+#include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/time.h>
@@ -31,7 +33,20 @@ char Version[] = "1.1";
  *  bsize   :   echo the Bisze from client
  *
  * */
-void sendOk(int sock...)
+void sendOk(int sock, struct sockaddr_in *server, uint16_t msgLength, uint32_t CxID, uint32_t seqNum, uint16_t msgSize)
+{
+    ok->msgLength = msgLength;
+    ok->msgType = CONTROL;
+    ok->code = OK;
+    ok->CxID = CxID;
+    ok->seqNum = seqNum;
+    ok->msgSize = msgSize;
+    /* start to send.. */
+    if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t)){
+        DiewithError("sendto() sent a different number of bytes than expected");
+    }
+   
+}
 
 
 /**
@@ -40,23 +55,35 @@ void sendOk(int sock...)
  *  bsize   :   echo the Bisze from client
  *
  * */
-void sendDataAck(int sock...)
+void sendDataAck(int sock);
 
 int main(int argc, char *argv[])
 {
+    /* server var */
     int sock;                    /* Socket */
+    unsigned short servPort;     /* Server port */
     struct sockaddr_in servAddr; /* Local address */
+
+    int bindFlag = 0;            /* server bind with any client or not*/
+    uint8_t bindMsgSize;
+
+    /* addr&port bind with */
+    unsigned long bindIP;
+    unsigned short bindPort;
+    
+
+    /* client var */
     struct sockaddr_in clntAddr; /* Client address */
     unsigned int cliAddrLen;     /* Length of incoming message */
-    unsigned short servPort;     /* Server port */
     int recvMsgSize;             /* Size of received message */
+    struct control_t *buffer = NULL; /* store received packet*/
 
     /* packets var */
     uint16_t msgType = 0;
     uint16_t code = 0;
    
     /* Check for correct number of parameters */ 
-    if (argc > 2)
+    if (argc >= 2)
     {
         servPort = atoi(argv[1]); /* local port */
     }
@@ -78,7 +105,7 @@ int main(int argc, char *argv[])
     /* Construct local address structure */
     memset(&servAddr, 0, sizeof(servAddr));     /* Zero out structure */
     servAddr.sin_family = AF_INET;              /* Internet address family */
-    servAddr.sinaddr.s_addr = htonl(INADDR_ANY);/* Any incoming interface */
+    servAddr.sin_addr.s_addr = htonl(INADDR_ANY);/* Any incoming interface */
     servAddr.sin_port = htonl(servPort);        /* Local port */
 
     /* create buffer to store packets. 1600 maximum of packet size */
@@ -88,7 +115,7 @@ int main(int argc, char *argv[])
     /* Bind to the local address */
     if (bind(sock, (struct sockadr *) &servAddr, sizeof(servAddr)) < 0)
     {
-        printf("Failure on bind, errno:%d\n, errno");
+        printf("Failure on bind, errno:%d\n", errno);
     }
 
     /* Forever Loop */
@@ -112,11 +139,24 @@ int main(int argc, char *argv[])
                 {
                     switch (code)
                     {
-                        case Start :
+                        case START :
                         {
+                            if (bindFlag == 0)
+                            {
+                                bindFlag = 1;
+                                bindPort = (struct sockaddr *)&clntAddr.sin_port;
+                                bindIP = (struct sockaddr *)&clntAddr.sin_addr.s_addr;
+                                bindMsgSize = ntohl(buffer->msgSize);
+                                sendOk(sock, &clntAddr, 
+                                    buffer->msgLength,
+                                    buffer->CxID,
+                                    buffer->seqNum,
+                                    buffer->msgSize
+                                    );
+                            }
                             break;
                         }
-                        case Stop :
+                        case STOP :
                         {
                             break;
                         }
