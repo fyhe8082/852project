@@ -26,19 +26,16 @@ static struct ACK_t *dataAck = NULL;
 static uint32_t CxID;
 static uint32_t lossRate;
 static uint32_t recvRate;
+/*the struct for store the receive history*/
+struct QUEUE log;
+struct logEntry entry;
 
-struct logEntry {
-    struct data_t packet;
-    uint64_t timeArrived;
-};
+/*the struct for storing the loss packets*/
+struct node_t lossRecord;
 
-typedef struct Queue
-{
-    struct logEntry *qBase;
-    int front;
-    int rear;
-}QUEUE;
+struct timeval tv;
 
+/*the function for receive history */
 void initQueue(QUEUE *pq);
 void enQueue(QUEUE *pq , struct logEntry value);
 bool isemptyQueue(QUEUE *pq);
@@ -84,8 +81,9 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->msgType = ACK;
     dataAck->code = OK;
     dataAck->CxID = CxID;
-    dataAck->ackNum = ackNum;
-    dataAck->timeStamp = timeStamp;
+    dataAck->ackNum = log->qBase[log->front]->packet->seqNum + 1; //need to fix
+    gettimeofday(&tv, NULL);
+    dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
     dataAck->T_delay = T_delay;
     dataAck->lossRate = lossRate;
     dataAck->recvRate = recvRate;
@@ -94,6 +92,49 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     {
         DieWithError("sendto() sent a different number of bytes than expected");
     }
+}
+
+int isNewLoss(struct data_t data)
+{   
+    entry->packet = &data;
+    gettimeofday(&tv, NULL);
+    entry->timeArrived = 1000000 * tv.tv_sec + tv.tv_usec; 
+    enQueue(log, entry);
+    if (remove_by_seqNum(lossRecord, data->seqNum)!=-1)
+    {
+        compute();
+        return 0;
+    }else{
+        updateLoss();
+        compute();
+    }
+}
+
+void updateLoss ()
+{
+    //if (higher==3)        add to lossRecord;
+    if (log->rear-3 <= log->front)
+        exit(0);
+
+    /*get the third biggest seqNum*/
+    int num = getMax3SeqNum()
+    int i = 1;
+    int index;
+
+    /*add all packets(not received) that have exactly 3 higher packet seqNum*/
+    for (i=1;i<=MAXN-3;i++)
+    {
+        index = existSeqNum(log, num-i);
+        if (index == -1)
+            push(lossRecord, num-i, log[index]->timeArrived)
+        else
+            break;
+    }
+}
+
+void compute()
+{
+    
 }
 
 int main(int argc, char *argv[])
@@ -231,7 +272,7 @@ int main(int argc, char *argv[])
                         printf("data recv\n");
                         
                         data = (data_t *)buffer;
-                        if(isNewLoss == 1)
+                        if(isNewLoss(data) == 1)
                         {
 
                             sendDataAck(sock, &clntAddr);
