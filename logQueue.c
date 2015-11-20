@@ -81,8 +81,8 @@ void enQueue(QUEUE *pq , struct logEntry value)
     if(is_fullQueue(pq))
         deQueue();
 
-    pq->qBase[pq->rear] = value;
-    pq->rear = (pq->rear + 1)%6 ;
+    pq->qBase[pq->rear] = &value;
+    pq->rear = (pq->rear + 1)%MAXN ;
     //printf("\n %d ?? \n" , value);
 
 }
@@ -105,7 +105,7 @@ void deQueue(QUEUE *pq , struct logEntry *value)
     {
         *value = pq->qBase[pq->front];
         //printf("\n %d ?? \n",*value);
-        pq->front = (pq->front + 1)%6 ;
+        pq->front = (pq->front + 1)%MAXN ;
 
     }
 
@@ -130,7 +130,7 @@ bool isemptyQueue(QUEUE *pq)
  *     ************************************/
 bool is_fullQueue(QUEUE *pq)
 {
-    if((pq->rear +1)%6 == pq->front)
+    if((pq->rear +1)%MAXN == pq->front)
     {
         return true;
     }else
@@ -156,7 +156,48 @@ void traverseQueue( QUEUE *pq)
     while(tail != pq->rear)
     {
         //printf(" %d ",pq->qBase[tail]);
-        tail = (tail + 1)%6;
+        tail = (tail + 1)%MAXN;
 
     }
+}
+
+uint32_t getMax3SeqNum(QUEUE *pq)
+{
+    uint32_t m[3];
+    int i = 0;
+    for(i=0;i<3;i++)
+    {
+        m[i] = 0;
+    }
+    
+    if(isemptyQueue(pq))
+        return 0;
+
+    int tail = pq->front;
+    while(tail != pq->rear)
+    {   
+        if(pq->qBase[tail]->packet->seqNum > m[0])
+            m[0] = pq->qBase[tail]->packet->seqNum;
+        else(pq->qBase[tail]->packet->seqNum > m[1])
+            m[1] = pq->qBase[tail]->packet->seqNum;
+        else(pq->qBase[tail]->packet->seqNum > m[2])
+            m[2] = pq->qBase[tail]->packet->seqNum;
+        
+        tail = (tail + 1)%MAXN;
+    }
+    return m[2];
+}
+
+int existSeqNum(QUEUE *pq, uint32_t seqNum)
+{
+    if(isemptyQueue(pq))
+        return 0;
+
+    int tail = pq->front;
+    while(tail != pq->rear)
+    {
+        if(pq->qBase[tail]->packet->seqNum == seqNUm)
+            return tail;
+    }
+    return -1;
 }
