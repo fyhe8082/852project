@@ -2,13 +2,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "tfrc.h"
+#include "tfrc-server.h"
 
-typedef struct node{
-    uint32_t seqNum;
-    uint64_t timeArrived;
-    bool isNewLoss;
-    struct node * next;
-}node_t;
+//typedef struct node{
+//    uint32_t seqNum;
+//    uint64_t timeArrived;
+//    bool isNewLoss;
+//    struct node * next;
+//}node_t;
 
 int pop(node_t ** head) {
     int retval = -1;
