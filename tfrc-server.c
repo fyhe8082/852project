@@ -17,7 +17,9 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/time.h>
+#include <stdbool.h>
 #include "tfrc.h"
+#include "tfrc-server.h"
 
 static struct control_t *buffer = NULL;
 static struct control_t *ok = NULL;
@@ -29,21 +31,13 @@ static uint32_t recvRate;
 /*the newest RTT*/
 static uint32_t RTT;
 /*the struct for store the receive history*/
-struct QUEUE log;
-struct logEntry entry;
+QUEUE *log;
+struct logEntry *entry;
 
 /*the struct for storing the loss packets*/
-struct node_t *lossRecord;
+node_t *lossRecord = NULL;
 
 struct timeval tv;
-
-/*the function for receive history */
-void initQueue(QUEUE *pq);
-void enQueue(QUEUE *pq , struct logEntry value);
-bool isemptyQueue(QUEUE *pq);
-bool is_fullQueue(QUEUE *pq);
-void deQueue(QUEUE *pq , struct logEntry *value);
-void traverseQueue( QUEUE *pq);
 
 void sigHandler(int);
 char Version[] = "1.1";
@@ -69,7 +63,8 @@ void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgS
     }
 
 }
-
+void updateLoss();
+void compute();
 
 /**
  *  bin     :   echo the BIN from client  
@@ -96,7 +91,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     }
 }
 
-int isNewLoss(struct data_t data)
+int isNewLoss(struct data_t *data)
 {   
     entry->packet = &data;
     gettimeofday(&tv, NULL);
@@ -115,12 +110,14 @@ int isNewLoss(struct data_t data)
 /*add any new loss to the lossRecord*/
 void updateLoss ()
 {
+    uint64_t T_loss;
+
     //if (higher==3)        add to lossRecord;
     if (log->rear-3 <= log->front)
         exit(0);
 
     /*get the third biggest seqNum*/
-    int num = getMax3SeqNum()
+    int num = getMax3SeqNum();
     int i = 1;
     int index;
 
@@ -129,10 +126,31 @@ void updateLoss ()
     {
         index = existSeqNum(log, num-i);
         if (index == -1)
-            append(&lossRecord, num-i, log[index]->timeArrived)
+        {
+            T_loss = T_lossCompute(num-i);
+            append(&lossRecord, num-i, T_loss);
+        }
         else
             break;
     }
+}
+
+uint64_t T_lossCompute(uint32_t S_loss)
+{
+    uint64_t T_loss;
+
+    int index_before = getIndexBefore(S_loss);
+    int index_after = getIndexAfter(S_loss);
+
+    uint32_t S_before = log->qbase[index_before]->packet->seqNum;
+    uint32_t S_after = log->qbase[index_after]->packet->seqNum;
+    uint64_t T_before = log->qbase[index_before]->packet->timeArrived;
+    uint64_t T_after = log->qbase[index_after]->packet->timeArrived;
+
+    T_loss = T_before + ((T_after - T_before) * (S_loss - S_before) / (S_after - S_before));
+
+    return T_loss;
+    
 }
 
 /*correct the start loss event mark and compute the lossrate*/
@@ -182,7 +200,6 @@ int main(int argc, char *argv[])
     /* packets var */
     uint8_t msgType;
     uint8_t code;
-    int isNewLoss = 0;           /* flag for if new Loss event occur*/
 
 
     /* Check for correct number of parameters */ 
@@ -293,7 +310,7 @@ int main(int argc, char *argv[])
                     {
                         printf("data recv\n");
                         
-                        data = (data_t *)buffer;
+                        data = (struct data_t *)buffer;
                         RTT = data->RTT;
                         if(isNewLoss(data) == 1)
                         {
