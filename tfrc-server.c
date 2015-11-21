@@ -136,6 +136,7 @@ void updateLoss ()
     }
 }
 
+/*compute the T_loss*/
 uint64_t T_lossCompute(uint32_t S_loss)
 {
     uint64_t T_loss;
@@ -152,6 +153,16 @@ uint64_t T_lossCompute(uint32_t S_loss)
 
     return T_loss;
     
+}
+
+/*compute the weight of loss Interval*/
+float getWeight(int i)
+{
+    float w_i = 0;
+    if(i < MAXN/2)
+        w_i = 1;
+    else
+        w_i = 1-(i-(MAXN/2-1))/(MAXN/2+1);
 }
 
 /*correct the start loss event mark and compute the lossrate*/
