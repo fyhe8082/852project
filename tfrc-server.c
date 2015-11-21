@@ -139,8 +139,8 @@ uint64_t T_lossCompute(uint32_t S_loss)
 {
     uint64_t T_loss;
 
-    int index_before = getIndexBefore(S_loss);
-    int index_after = getIndexAfter(S_loss);
+    int index_before = getIndexBefore(log, S_loss);
+    int index_after = getIndexAfter(log, S_loss);
 
     uint32_t S_before = log->qbase[index_before]->packet->seqNum;
     uint32_t S_after = log->qbase[index_after]->packet->seqNum;
@@ -200,6 +200,9 @@ int main(int argc, char *argv[])
     /* packets var */
     uint8_t msgType;
     uint8_t code;
+
+    /*init the Queue used for receive history*/
+    initQueue(log);
 
 
     /* Check for correct number of parameters */ 

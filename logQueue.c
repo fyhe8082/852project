@@ -17,12 +17,12 @@
 //    int rear;
 //}QUEUE;
 
-void initQueue(QUEUE *pq);
-void enQueue(QUEUE *pq , struct logEntry *value);
-bool isemptyQueue(QUEUE *pq);
-bool is_fullQueue(QUEUE *pq);
-void deQueue(QUEUE *pq , struct logEntry *value);
-void traverseQueue( QUEUE *pq);
+//void initQueue(QUEUE *pq);
+//void enQueue(QUEUE *pq , struct logEntry *value);
+//bool isemptyQueue(QUEUE *pq);
+//bool is_fullQueue(QUEUE *pq);
+//void deQueue(QUEUE *pq , struct logEntry *value);
+//void traverseQueue( QUEUE *pq);
 
 /************************************
  *     init a empty queue
@@ -139,13 +139,45 @@ uint32_t getMax3SeqNum(QUEUE *pq)
 int existSeqNum(QUEUE *pq, uint32_t seqNum)
 {
     if(isemptyQueue(pq))
-        return 0;
+        return -1;
 
     int tail = pq->front;
     while(tail != pq->rear)
     {
         if(pq->qBase[tail]->packet->seqNum == seqNum)
             return tail;
+        pq->tail = (pq->tail + 1)%MAXN ;
     }
     return -1;
+}
+
+int getIndexBefore(QUEUE *pq, uint32_t S_loss)
+{
+    int tail = pq->front;
+    int index = tail;
+
+    while(tail != pq->rear)
+    {
+        if(pq->qBase[tail]->seqNum < S_loss 
+                && pq->qBase[tail]->seqNum 
+                > pq->qBase[index]->seqNum)
+            index = tail;
+
+        pq->tail = (pq->tail + 1)%MAXN ;
+    }
+}
+uint64_t getIndexAfter(QUEUE *pq, uint32_t S_loss)
+{
+    int tail = pq->front;
+    int index = tail;
+
+    while(tail != pq->rear)
+    {
+        if(pq->qBase[tail]->seqNum > S_loss 
+                && pq->qBase[tail]->seqNum 
+                < pq->qBase[index]->seqNum)
+            index = tail;
+
+        pq->tail = (pq->tail + 1)%MAXN ;
+    }
 }
