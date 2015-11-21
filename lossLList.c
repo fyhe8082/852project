@@ -1,12 +1,14 @@
-#include<stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
-struct node {
+typedef struct node{
     uint32_t seqNum;
     uint64_t timeArrived;
     bool isNewLoss;
     struct node * next;
-} node_t;
-
+}node_t;
 
 int pop(node_t ** head) {
     int retval = -1;
@@ -35,7 +37,7 @@ int remove_by_seqNum(node_t ** head, int seqNum) {
         return pop(head);
     }
 
-    while (current->next->seqNUm != seqNum) {
+    while (current->next->seqNum != seqNum) {
         if (current->next == NULL) {
             return -1;
         }
