@@ -78,3 +78,4 @@ struct ACK_t {
 };
 
 void DieWithError(char *errorMessage);  /* External error handling function */
+
