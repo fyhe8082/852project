@@ -31,7 +31,7 @@ static uint32_t recvRate;
 /*the newest RTT*/
 static uint32_t RTT;
 /*the struct for store the receive history*/
-QUEUE *log;
+QUEUE *mylog;
 struct logEntry *entry;
 
 /*the struct for storing the loss packets*/
@@ -65,6 +65,7 @@ void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgS
 }
 void updateLoss();
 void compute();
+uint64_t T_lossCompute(uint32_t S_loss);
 
 /**
  *  bin     :   echo the BIN from client  
@@ -81,7 +82,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->ackNum = lossRecord->seqNum + 1; 
     gettimeofday(&tv, NULL);
     dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
-    dataAck->T_delay = data->timeStamp - log->qBase[log->front]->packet->timeStamp;
+    dataAck->T_delay = data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp;
     dataAck->lossRate = lossRate;
     dataAck->recvRate = recvRate;
     /* start to send.. */
@@ -93,10 +94,10 @@ void sendDataAck(int sock,struct sockaddr_in *server)
 
 int isNewLoss(struct data_t *data)
 {   
-    entry->packet = &data;
+    entry->packet = data;
     gettimeofday(&tv, NULL);
     entry->timeArrived = 1000000 * tv.tv_sec + tv.tv_usec; 
-    enQueue(log, entry);
+    enQueue(mylog, entry);
     if (remove_by_seqNum(&lossRecord, data->seqNum)!=-1)
     {
         compute();
@@ -113,18 +114,18 @@ void updateLoss ()
     uint64_t T_loss;
 
     //if (higher==3)        add to lossRecord;
-    if (log->rear-3 <= log->front)
+    if (mylog->rear-3 <= mylog->front)
         exit(0);
 
     /*get the third biggest seqNum*/
-    int num = getMax3SeqNum();
-    int i = 1;
+    uint32_t num = getMax3SeqNum();
+    uint32_t i = 1;
     int index;
 
     /*add all packets(not received) that have exactly 3 higher packet seqNum*/
     for (i=1;i<=MAXN-3;i++)
     {
-        index = existSeqNum(log, num-i);
+        index = existSeqNum(mylog, num-i);
         if (index == -1)
         {
             T_loss = T_lossCompute(num-i);
@@ -139,13 +140,13 @@ uint64_t T_lossCompute(uint32_t S_loss)
 {
     uint64_t T_loss;
 
-    int index_before = getIndexBefore(log, S_loss);
-    int index_after = getIndexAfter(log, S_loss);
+    int index_before = getIndexBefore(mylog, S_loss);
+    int index_after = getIndexAfter(mylog, S_loss);
 
-    uint32_t S_before = log->qbase[index_before]->packet->seqNum;
-    uint32_t S_after = log->qbase[index_after]->packet->seqNum;
-    uint64_t T_before = log->qbase[index_before]->packet->timeArrived;
-    uint64_t T_after = log->qbase[index_after]->packet->timeArrived;
+    uint32_t S_before = mylog->qBase[index_before]->packet->seqNum;
+    uint32_t S_after = mylog->qBase[index_after]->packet->seqNum;
+    uint64_t T_before = mylog->qBase[index_before]->timeArrived;
+    uint64_t T_after = mylog->qBase[index_after]->timeArrived;
 
     T_loss = T_before + ((T_after - T_before) * (S_loss - S_before) / (S_after - S_before));
 
@@ -202,7 +203,7 @@ int main(int argc, char *argv[])
     uint8_t code;
 
     /*init the Queue used for receive history*/
-    initQueue(log);
+    initQueue(mylog);
 
 
     /* Check for correct number of parameters */ 
@@ -236,7 +237,7 @@ int main(int argc, char *argv[])
 
 
     /* Bind to the local address */
-    if (bind(sock, (struct sockadr *) &servAddr, sizeof(servAddr)) < 0)
+    if (bind(sock, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
     {
         printf("Failure on bind, errno:%d\n", errno);
     }
@@ -267,8 +268,8 @@ int main(int argc, char *argv[])
                                 if (bindFlag == 0)
                                 {
                                     bindFlag = 1;
-                                    bindPort = (struct sockaddr *)&clntAddr.sin_port;
-                                    bindIP = (struct sockaddr *)&clntAddr.sin_addr.s_addr;
+                                    bindPort = clntAddr.sin_port;
+                                    bindIP = clntAddr.sin_addr.s_addr;
                                     CxID = buffer->CxID;
                                     bindMsgSize = ntohl(buffer->msgSize);
                                     sendOk(sock, &clntAddr, 
@@ -288,8 +289,8 @@ int main(int argc, char *argv[])
                         case STOP :
                             {
                                 if (bindFlag == 1 
-                                        && bindIP == (struct sockaddr *)&clntAddr.sin_addr.s_addr
-                                        && bindPort == (struct sockaddr *)&clntAddr.sin_port)
+                                        && bindIP == clntAddr.sin_addr.s_addr
+                                        && bindPort == clntAddr.sin_port)
                                 {
                                     printf("STOP msg received!\n\n");
                                     sendOk(sock, &clntAddr, 
@@ -308,8 +309,8 @@ int main(int argc, char *argv[])
             case DATA :
                 {
                     if (bindFlag == 1 
-                            && bindIP == (struct sockaddr *)&clntAddr.sin_addr.s_addr
-                            && bindPort == (struct sockaddr *)&clntAddr.sin_port)
+                            && bindIP == clntAddr.sin_addr.s_addr
+                            && bindPort == clntAddr.sin_port)
                     {
                         printf("data recv\n");
                         

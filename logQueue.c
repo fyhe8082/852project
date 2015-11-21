@@ -146,7 +146,7 @@ int existSeqNum(QUEUE *pq, uint32_t seqNum)
     {
         if(pq->qBase[tail]->packet->seqNum == seqNum)
             return tail;
-        pq->tail = (pq->tail + 1)%MAXN ;
+        tail = (tail + 1)%MAXN ;
     }
     return -1;
 }
@@ -158,26 +158,27 @@ int getIndexBefore(QUEUE *pq, uint32_t S_loss)
 
     while(tail != pq->rear)
     {
-        if(pq->qBase[tail]->seqNum < S_loss 
-                && pq->qBase[tail]->seqNum 
-                > pq->qBase[index]->seqNum)
+        if(pq->qBase[tail]->packet->seqNum < S_loss 
+                && pq->qBase[tail]->packet->seqNum 
+                > pq->qBase[index]->packet->seqNum)
             index = tail;
 
-        pq->tail = (pq->tail + 1)%MAXN ;
+        tail = (tail + 1)%MAXN ;
     }
 }
-uint64_t getIndexAfter(QUEUE *pq, uint32_t S_loss)
+
+int getIndexAfter(QUEUE *pq, uint32_t S_loss)
 {
     int tail = pq->front;
     int index = tail;
 
     while(tail != pq->rear)
     {
-        if(pq->qBase[tail]->seqNum > S_loss 
-                && pq->qBase[tail]->seqNum 
-                < pq->qBase[index]->seqNum)
+        if(pq->qBase[tail]->packet->seqNum > S_loss 
+                && pq->qBase[tail]->packet->seqNum 
+                < pq->qBase[index]->packet->seqNum)
             index = tail;
 
-        pq->tail = (pq->tail + 1)%MAXN ;
+        tail = (tail + 1)%MAXN ;
     }
 }
