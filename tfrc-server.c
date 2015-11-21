@@ -26,12 +26,14 @@ static struct ACK_t *dataAck = NULL;
 static uint32_t CxID;
 static uint32_t lossRate;
 static uint32_t recvRate;
+/*the newest RTT*/
+static uint32_t RTT;
 /*the struct for store the receive history*/
 struct QUEUE log;
 struct logEntry entry;
 
 /*the struct for storing the loss packets*/
-struct node_t lossRecord;
+struct node_t *lossRecord;
 
 struct timeval tv;
 
@@ -81,10 +83,10 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->msgType = ACK;
     dataAck->code = OK;
     dataAck->CxID = CxID;
-    dataAck->ackNum = log->qBase[log->front]->packet->seqNum + 1; //need to fix
+    dataAck->ackNum = lossRecord->seqNum + 1; 
     gettimeofday(&tv, NULL);
     dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
-    dataAck->T_delay = T_delay;
+    dataAck->T_delay = data->timeStamp - log->qBase[log->front]->packet->timeStamp;
     dataAck->lossRate = lossRate;
     dataAck->recvRate = recvRate;
     /* start to send.. */
@@ -100,7 +102,7 @@ int isNewLoss(struct data_t data)
     gettimeofday(&tv, NULL);
     entry->timeArrived = 1000000 * tv.tv_sec + tv.tv_usec; 
     enQueue(log, entry);
-    if (remove_by_seqNum(lossRecord, data->seqNum)!=-1)
+    if (remove_by_seqNum(&lossRecord, data->seqNum)!=-1)
     {
         compute();
         return 0;
@@ -110,6 +112,7 @@ int isNewLoss(struct data_t data)
     }
 }
 
+/*add any new loss to the lossRecord*/
 void updateLoss ()
 {
     //if (higher==3)        add to lossRecord;
@@ -126,15 +129,34 @@ void updateLoss ()
     {
         index = existSeqNum(log, num-i);
         if (index == -1)
-            push(lossRecord, num-i, log[index]->timeArrived)
+            append(&lossRecord, num-i, log[index]->timeArrived)
         else
             break;
     }
 }
 
+/*correct the start loss event mark and compute the lossrate*/
 void compute()
 {
-    
+   /*correct the start loss mark*/ 
+   node_t * p = lossRecord;
+   p->isNewLoss = true;
+   uint64_t lossStart = p->timeArrived;
+   uint64_t interval = 0;
+
+   while(p->next != NULL)
+   {
+       interval = p->next->timeArrived - p->timeArrived;
+       if(interval > RTT)
+       {
+           lossStart = p->next->timeArrived;
+           p->next->isNewLoss = true;
+       }
+       p=p->next;
+   }
+
+   /*compute the lossrate and receive rate*/
+
 }
 
 int main(int argc, char *argv[])
@@ -272,9 +294,9 @@ int main(int argc, char *argv[])
                         printf("data recv\n");
                         
                         data = (data_t *)buffer;
+                        RTT = data->RTT;
                         if(isNewLoss(data) == 1)
                         {
-
                             sendDataAck(sock, &clntAddr);
                         }
                     }
