@@ -1,7 +1,7 @@
 #include<stdlib.h>
 
 struct node {
-    int seqNum;
+    uint32_t seqNum;
     uint64_t timeArrived;
     bool isNewLoss;
     struct node * next;
@@ -55,12 +55,14 @@ int remove_by_seqNum(node_t ** head, int seqNum) {
 
 }
 
-void push(node_t ** head, int seqNum, uint64_t timeArrived) {
+void append(node_t ** head, int seqNum, uint64_t timeArrived) {
     node_t * new_node;
+    node_t * p = *head;
     new_node = malloc(sizeof(node_t));
 
     new_node->seqNum = seqNum;
     new_node->timeArrived = timeArrived;
-    new_node->next = *head;
-    *head = new_node;
+    while(p->next != NULL)p=p->next;
+    new_node->next = NULL;
+    p->next = new_node;
 }
