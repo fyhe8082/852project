@@ -28,6 +28,16 @@ static struct ACK_t *dataAck = NULL;
 static uint32_t CxID;
 static uint32_t lossRate = 0;
 static uint32_t recvRate = 0;
+
+/*var for output*/
+static int countRecv = 0;
+static int countRecvBytes = 0;
+static int countAck = 0;
+static double countDroped = 0;
+static double accuLossrate = 0;
+static uint32_t seqMax = 0;
+static uint32_t seqMin = 0;
+
 /*the newest RTT*/
 static uint32_t RTT;
 /*the struct for store the receive history*/
@@ -50,6 +60,7 @@ uint64_t T_lossCompute(uint32_t S_loss);
 float getWeight(int i, int I_num);
 void compute();
 uint64_t max(uint64_t i1, uint64_t i2);
+void display();
 
 /**
  *  bin     :   echo the BIN from client  
@@ -99,6 +110,8 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     {
         DieWithError("sendto() sent a different number of bytes than expected");
     }
+    countAck++;
+    accuLossrate += dataAck->recvRate;
 }
 
 int isNewLoss(struct data_t *data)
@@ -111,6 +124,7 @@ int isNewLoss(struct data_t *data)
     if (remove_by_seqNum(&lossRecord, data->seqNum)!=-1)
     {
         /*remove this loss in the loss record and recompute the lossrate*/
+        countDroped--;
         compute();
         return 0;
     }else{
@@ -142,6 +156,7 @@ void updateLoss ()
         {
             T_loss = T_lossCompute(num-i);
             append(&lossRecord, num-i, T_loss);
+            countDroped++;
         }
         else
             break;
@@ -336,6 +351,10 @@ int main(int argc, char *argv[])
         }
 
         printf("received success!!\n");
+        countRecv++;
+        countRecvBytes += recvMsgSize;
+        if(buffer->seqNum > seqMax)
+            seqMax = buffer->seqNum;
         
         /* Parsing the packet */
         msgType = buffer -> msgType;
@@ -351,6 +370,12 @@ int main(int argc, char *argv[])
                                 if (bindFlag == 0)
                                 {
                                     bindFlag = 1;
+                                    //init the record var
+                                    countRecv = 1;
+                                    countRecvBytes = recvMsgSize;
+                                    seqMax = buffer->seqNum;
+                                    seqMin = buffer->seqNum;
+
                                     bindPort = clntAddr.sin_port;
                                     bindIP = clntAddr.sin_addr.s_addr;
                                     CxID = buffer->CxID;
@@ -380,7 +405,8 @@ int main(int argc, char *argv[])
                                             buffer->seqNum,
                                             buffer->msgSize
                                           );
-                                    //display();
+                                    //display the output information
+                                    display();
                                 }
                                 break;
                             }
@@ -418,8 +444,17 @@ int main(int argc, char *argv[])
     return 0;
 }   
 
+void display()
+{
+    printf("\nAmount of data received: %d packets and %d bytes\n", countRecv,countRecvBytes);
+    printf("Number of ACKs sent: %d packets\n", countAck);
+    printf("The total packet loss rate: %.3f\n",countDroped/(seqMax-seqMin+1));
+    printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/1000/countAck);
+}
+
 void sigHandler(int sig)
 {
-    printf("result\n");
+    //printf("result\n");
+    display();
     exit(1);
 }
