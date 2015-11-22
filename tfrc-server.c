@@ -29,6 +29,7 @@ int sock;                    /* Socket */
 struct sockaddr_in clntAddr; /* Client address */
 static uint32_t CxID;
 static uint32_t lossRate = 0;
+static uint32_t preLossRate = 0;
 static uint32_t recvRate = 0;
 
 /*var for output*/
@@ -56,7 +57,7 @@ char Version[] = "1.1";
 
 void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgSize);
 void sendDataAck(int sock,struct sockaddr_in *server);
-int isNewLoss(struct data_t *data);
+void enQueueAndCheck(struct data_t *data);
 void updateLoss();
 uint64_t T_lossCompute(uint32_t S_loss);
 float getWeight(int i, int I_num);
@@ -116,7 +117,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     accuLossrate += dataAck->recvRate;
 }
 
-int isNewLoss(struct data_t *data)
+void enQueueAndCheck(struct data_t *data)
 {   
     entry->packet = data;
     gettimeofday(&tv, NULL);
@@ -128,7 +129,6 @@ int isNewLoss(struct data_t *data)
         /*remove this loss in the loss record and recompute the lossrate*/
         countDroped--;
         compute();
-        return 0;
     }else{
         /*else to figure if any new packet need to be looked as loss ones and recompute the lossrate*/
         updateLoss();
@@ -431,7 +431,9 @@ int main(int argc, char *argv[])
 
                         data = (struct data_t *)buffer;
                         RTT = data->RTT;
-                        if(isNewLoss(data) == 1)
+                        preLossRate = lossRate;
+                        enQueueAndCheck(data);
+                        if(lossRate > preLossRate)
                         {
                             sendDataAck(sock, &clntAddr);
                             alarm(RTT/1000);
