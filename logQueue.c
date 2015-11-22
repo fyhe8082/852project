@@ -29,7 +29,25 @@
  *     ************************************/
 void initQueue(QUEUE *pq)
 {
-    pq->qBase = (struct logEntry **)malloc(sizeof(struct logEntry *));
+    pq->qBase = (struct logEntry **)malloc(sizeof(struct logEntry *)*MAXN);
+
+    int i;
+    for (i=0;i<MAXN;i++)
+    {
+        pq->qBase[i] = (struct logEntry *)malloc(sizeof(struct logEntry));
+        pq->qBase[i]->packet = (struct data_t*)malloc(sizeof(struct data_t));
+        //pq->qBase[i]->timeArrived = (uint64_t)malloc(sizeof(uint64_t));
+/*
+        pq->qBase[i]->packet->msgLength = (uint16_t)malloc(sizeof(uint16_t));
+        pq->qBase[i]->packet->msgType = (uint8_t)malloc(sizeof(uint8_t));
+        pq->qBase[i]->packet->code = (uint8_t)malloc(sizeof(uint8_t));
+        pq->qBase[i]->packet->CxID = (uint32_t)malloc(sizeof(uint32_t));
+        pq->qBase[i]->packet->seqNum = (uint32_t)malloc(sizeof(uint32_t));
+        pq->qBase[i]->packet->timeStamp = (uint64_t)malloc(sizeof(uint64_t));
+        pq->qBase[i]->packet->RTT = (uint32_t)malloc(sizeof(uint32_t));
+        //pq->qBase[i]->packet->X = (uint8_t)malloc(sizeof(uint8_t));*/
+    }
+
     if(pq->qBase == NULL)
     {
         printf("can't init!\n");

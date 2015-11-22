@@ -78,7 +78,6 @@ void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgS
     ok->seqNum = seqNum;
     ok->msgSize = msgSize;
     /* start to send.. */
-    printf("asdf");
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server)) != sizeof(struct control_t))
     {
         DieWithError("sendto() sent a different number of bytes than expected");
@@ -296,8 +295,13 @@ int main(int argc, char *argv[])
     uint8_t code;
 
     /*init the Queue used for receive history*/
-    //initQueue(mylog);
+    mylog = (QUEUE *)malloc(sizeof(QUEUE));
+    initQueue(mylog);
+    //mylog->qBase = (struct logEntry **)malloc(sizeof(struct logEntry *)*MAXN);
+    //mylog->front = mylog->rear = 0;
 
+    /*init loss Record*/
+    lossRecord = (node_t *)malloc(sizeof(node_t));
 
     /* Check for correct number of parameters */ 
     if (argc >= 2)
