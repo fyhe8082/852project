@@ -25,6 +25,8 @@ static struct control_t *buffer = NULL;
 static struct control_t *ok = NULL;
 static struct data_t *data = NULL;
 static struct ACK_t *dataAck = NULL;
+int sock;                    /* Socket */
+struct sockaddr_in clntAddr; /* Client address */
 static uint32_t CxID;
 static uint32_t lossRate = 0;
 static uint32_t recvRate = 0;
@@ -61,6 +63,7 @@ float getWeight(int i, int I_num);
 void compute();
 uint64_t max(uint64_t i1, uint64_t i2);
 void display();
+void handle_alarm(int ignored);
 
 /**
  *  bin     :   echo the BIN from client  
@@ -70,7 +73,7 @@ void display();
  * */
 void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgSize)
 {
-    
+
     ok->msgLength = CONT_LEN;
     ok->msgType = CONTROL;
     ok->code = OK;
@@ -178,7 +181,7 @@ uint64_t T_lossCompute(uint32_t S_loss)
     T_loss = T_before + ((T_after - T_before) * (S_loss - S_before) / (S_after - S_before));
 
     return T_loss;
-    
+
 }
 
 /*compute the weight of loss Interval*/
@@ -197,69 +200,69 @@ float getWeight(int i, int I_num)
 /*correct the start loss event mark and compute the lossrate*/
 void compute()
 {
-   /*correct the start loss parket mark*/ 
-   node_t * p = lossRecord;
-   p->isNewLoss = true;
-   uint64_t lossStart = p->timeArrived;
-   uint64_t interval = 0;
+    /*correct the start loss parket mark*/ 
+    node_t * p = lossRecord;
+    p->isNewLoss = true;
+    uint64_t lossStart = p->timeArrived;
+    uint64_t interval = 0;
 
-   /*compute the number of loss event*/
-   int I_count = 0;
+    /*compute the number of loss event*/
+    int I_count = 0;
 
-   while(p->next != NULL)
-   {
-       interval = p->next->timeArrived - p->timeArrived;
-       if(interval > RTT)
-       {
-           lossStart = p->next->timeArrived;
-           p->next->isNewLoss = true;
-           I_count++;
-       }
-       p=p->next;
-   }
+    while(p->next != NULL)
+    {
+        interval = p->next->timeArrived - p->timeArrived;
+        if(interval > RTT)
+        {
+            lossStart = p->next->timeArrived;
+            p->next->isNewLoss = true;
+            I_count++;
+        }
+        p=p->next;
+    }
 
-   /*contruct the array to store the Interval of loss event, the order is the reveal as the RFC 3448 description*/
+    /*contruct the array to store the Interval of loss event, the order is the reveal as the RFC 3448 description*/
 
-   uint64_t *array;
-   array = (uint64_t *)malloc(I_count*sizeof(uint64_t));
-   int i = 0;
-   uint64_t preTime = 0;
-   p = lossRecord;
+    uint64_t *array;
+    array = (uint64_t *)malloc(I_count*sizeof(uint64_t));
+    int i = 0;
+    uint64_t preTime = 0;
+    p = lossRecord;
 
-   while(p != NULL)
-   {
-       if (p->isNewLoss == true)
-       {
-           if (preTime != 0)
-           {
-               array[i] = p->timeArrived - preTime;
-               i++;
-           }
-           preTime = p->timeArrived;
-       }
-       p=p->next;
-   }
+    while(p != NULL)
+    {
+        if (p->isNewLoss == true)
+        {
+            if (preTime != 0)
+            {
+                array[i] = p->timeArrived - preTime;
+                i++;
+            }
+            preTime = p->timeArrived;
+        }
+        p=p->next;
+    }
 
-   gettimeofday(&tv, NULL);
-   array[i] = (1000000 * tv.tv_sec + tv.tv_usec) - preTime;
+    gettimeofday(&tv, NULL);
+    array[i] = (1000000 * tv.tv_sec + tv.tv_usec) - preTime;
 
-   /*compute the loss event rate*/
-   int n = I_count -1;
-   uint64_t I_tot0 = 0;
-   uint64_t I_tot1 = 0;
-   uint64_t I_tot = 0;
-   float I_mean = 0;
-   float W_tot = 0;
-   for (i=n;i>0;i--)
-   {
-       I_tot0 = I_tot0 + (array[n-i]*getWeight(i-1,n));
-       W_tot = W_tot + getWeight(i,n);
-   }
-   for (i=n-1;i>=0;i--)
-       I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n));
-   I_tot = max(I_tot0, I_tot1);
-   I_mean = I_tot/W_tot;
-   lossRate = (uint32_t)(1/I_mean)*1000;
+    /*compute the loss event rate*/
+    int n = I_count -1;
+    uint64_t I_tot0 = 0;
+    uint64_t I_tot1 = 0;
+    uint64_t I_tot = 0;
+    float I_mean = 0;
+    float W_tot = 0;
+    for (i=n;i>0;i--)
+    {
+        I_tot0 = I_tot0 + (array[n-i]*getWeight(i-1,n));
+        W_tot = W_tot + getWeight(i,n);
+    }
+    for (i=n-1;i>=0;i--)
+        I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n));
+    I_tot = max(I_tot0, I_tot1);
+    I_mean = I_tot/W_tot;
+    lossRate = (uint32_t)(1/I_mean)*1000;
 }
 
 uint64_t max(uint64_t i1, uint64_t i2)
@@ -273,7 +276,6 @@ uint64_t max(uint64_t i1, uint64_t i2)
 int main(int argc, char *argv[])
 {
     /* server var */
-    int sock;                    /* Socket */
     unsigned short servPort;     /* Server port */
     struct sockaddr_in servAddr; /* Local address */
 
@@ -286,7 +288,6 @@ int main(int argc, char *argv[])
 
 
     /* client var */
-    struct sockaddr_in clntAddr; /* Client address */
     unsigned int cliAddrLen;     /* Length of incoming message */
     int recvMsgSize;             /* Size of received message */
 
@@ -317,6 +318,7 @@ int main(int argc, char *argv[])
 
     /* bind SIGINT function */
     signal(SIGINT, sigHandler);
+    signal(SIGALRM, handle_alarm);
 
     /* Create socket for sending/receiving datagrams */
     if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
@@ -359,7 +361,7 @@ int main(int argc, char *argv[])
         countRecvBytes += recvMsgSize;
         if(buffer->seqNum > seqMax)
             seqMax = buffer->seqNum;
-        
+
         /* Parsing the packet */
         msgType = buffer -> msgType;
         code = buffer -> code;
@@ -426,15 +428,16 @@ int main(int argc, char *argv[])
                             && bindPort == clntAddr.sin_port)
                     {
                         printf("data recv\n");
-                        
+
                         data = (struct data_t *)buffer;
                         RTT = data->RTT;
                         if(isNewLoss(data) == 1)
                         {
                             sendDataAck(sock, &clntAddr);
+                            alarm(RTT/1000);
                         }
-                        //now send each receive
-                        else sendDataAck(sock, &clntAddr);
+                        //send each receive
+                        //else sendDataAck(sock, &clntAddr);
                     }
 
                     break;
@@ -461,4 +464,11 @@ void sigHandler(int sig)
     //printf("result\n");
     display();
     exit(1);
+}
+
+void handle_alarm(int ignored)
+{
+    sendDataAck(sock, &clntAddr);
+    alarm(RTT/1000);
+    return;
 }
