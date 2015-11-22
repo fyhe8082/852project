@@ -11,7 +11,6 @@
 *
 *********************************************************/
 #include <stdio.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <string.h>     /* for memset() */
@@ -24,6 +23,8 @@
 
 /*largest amount of data on a socket read*/
 #define MAX_BUFFER 65000
+/* largest queue number */
+#define MAXN 8
 
 
 /* Message type */
@@ -35,6 +36,11 @@
 #define START (0x01)
 #define STOP (0x02)
 #define OK (0x03)
+
+/* Message length */
+#define CONT_LEN 14
+#define ACK_LEN 32
+#define DATA_HANDER_len 24
 
 /* Considered as Control Message */
 struct control_t {
@@ -72,3 +78,4 @@ struct ACK_t {
 };
 
 void DieWithError(char *errorMessage);  /* External error handling function */
+
