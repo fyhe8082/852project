@@ -42,6 +42,15 @@ struct timeval tv;
 void sigHandler(int);
 char Version[] = "1.1";
 
+void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgSize);
+void sendDataAck(int sock,struct sockaddr_in *server);
+int isNewLoss(struct data_t *data);
+void updateLoss();
+uint64_t T_lossCompute(uint32_t S_loss);
+float getWeight(int i, int I_num);
+void compute();
+uint64_t max(uint64_t i1, uint64_t i2);
+
 /**
  *  bin     :   echo the BIN from client  
  *  seq     :   echo the seq from client  
@@ -63,9 +72,6 @@ void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgS
     }
 
 }
-void updateLoss();
-void compute();
-uint64_t T_lossCompute(uint32_t S_loss);
 
 /**
  *  bin     :   echo the BIN from client  
@@ -156,23 +162,29 @@ uint64_t T_lossCompute(uint32_t S_loss)
 }
 
 /*compute the weight of loss Interval*/
-float getWeight(int i)
+float getWeight(int i, int I_num)
 {
+    if(I_num > 8)
+        I_num = 8;
+
     float w_i = 0;
-    if(i < MAXN/2)
+    if(i < I_num/2)
         w_i = 1;
     else
-        w_i = 1-(i-(MAXN/2-1))/(MAXN/2+1);
+        w_i = 1-(i-(I_num/2-1))/(I_num/2+1);
 }
 
 /*correct the start loss event mark and compute the lossrate*/
 void compute()
 {
-   /*correct the start loss mark*/ 
+   /*correct the start loss parket mark*/ 
    node_t * p = lossRecord;
    p->isNewLoss = true;
    uint64_t lossStart = p->timeArrived;
    uint64_t interval = 0;
+
+   /*compute the number of loss event*/
+   int I_count = 0;
 
    while(p->next != NULL)
    {
@@ -181,12 +193,61 @@ void compute()
        {
            lossStart = p->next->timeArrived;
            p->next->isNewLoss = true;
+           I_count++;
        }
        p=p->next;
    }
 
-   /*compute the lossrate and receive rate*/
+   /*contruct the array to store the Interval of loss event, the order is the reveal as the RFC 3448 description*/
 
+   uint64_t *array;
+   array = (uint64_t *)malloc(I_count*sizeof(uint64_t));
+   int i = 0;
+   uint64_t preTime = 0;
+   p = lossRecord;
+
+   while(p != NULL)
+   {
+       if (p->isNewLoss == true)
+       {
+           if (preTime != 0)
+           {
+               array[i] = p->timeArrived - preTime;
+               i++;
+           }
+           preTime = p->timeArrived;
+       }
+       p=p->next;
+   }
+
+   gettimeofday(&tv, NULL);
+   array[i] = (1000000 * tv.tv_sec + tv.tv_usec) - preTime;
+
+   /*compute the loss event rate*/
+   int n = I_count -1;
+   uint64_t I_tot0 = 0;
+   uint64_t I_tot1 = 0;
+   uint64_t I_tot = 0;
+   float I_mean = 0;
+   float W_tot = 0;
+   for (i=n;i>0;i--)
+   {
+       I_tot0 = I_tot0 + (array[n-i]*getWeight(i-1,n));
+       W_tot = W_tot + getWeight(i,n);
+   }
+   for (i=n-1;i>=0;i--)
+       I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n));
+   I_tot = max(I_tot0, I_tot1);
+   I_mean = I_tot/W_tot;
+   lossRate = 1/I_mean;
+}
+
+uint64_t max(uint64_t i1, uint64_t i2)
+{
+    if (i1>i2)
+        return i1;
+    else
+        return i2;
 }
 
 int main(int argc, char *argv[])
