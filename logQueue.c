@@ -179,7 +179,7 @@ int getIndexAfter(QUEUE *pq, uint32_t S_loss)
                 < pq->qBase[index]->packet->seqNum)
             index = tail;
 
-        tail = (tail + 1)%MAXN ;
+        tail = (tail + 1)%MAXN;
     }
 }
 
@@ -190,8 +190,8 @@ int getRecvCount(QUEUE *pq, uint64_t timeLine)
    
    while(tail != pq->rear)
    {
-       if (pq->qBase[tail]->timeReceived > timeLine)
+       if (pq->qBase[tail]->timeArrived > timeLine)
            count++;
    } 
-   return count
+   return count;
 }

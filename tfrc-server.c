@@ -92,7 +92,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
     dataAck->T_delay = data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp;
     dataAck->lossRate = lossRate;
-    dataAck->recvRate = recvRate;
+    dataAck->recvRate = (uint32_t)(getRecvCount(mylog, (data->timeStamp - RTT))/RTT);
     /* start to send.. */
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
     {
@@ -106,11 +106,14 @@ int isNewLoss(struct data_t *data)
     gettimeofday(&tv, NULL);
     entry->timeArrived = 1000000 * tv.tv_sec + tv.tv_usec; 
     enQueue(mylog, entry);
+    /*if it is a packet used to be a loss one at receiver*/
     if (remove_by_seqNum(&lossRecord, data->seqNum)!=-1)
     {
+        /*remove this loss in the loss record and recompute the lossrate*/
         compute();
         return 0;
     }else{
+        /*else to figure if any new packet need to be looked as loss ones and recompute the lossrate*/
         updateLoss();
         compute();
     }
@@ -126,7 +129,7 @@ void updateLoss ()
         exit(0);
 
     /*get the third biggest seqNum*/
-    uint32_t num = getMax3SeqNum();
+    uint32_t num = getMax3SeqNum(mylog);
     uint32_t i = 1;
     int index;
 
@@ -399,6 +402,8 @@ int main(int argc, char *argv[])
                         {
                             sendDataAck(sock, &clntAddr);
                         }
+                        //now send each receive
+                        else sendDataAck(sock, &clntAddr);
                     }
 
                     break;
