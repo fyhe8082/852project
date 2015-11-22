@@ -59,6 +59,7 @@ uint64_t max(uint64_t i1, uint64_t i2);
  * */
 void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgSize)
 {
+    
     ok->msgLength = CONT_LEN;
     ok->msgType = CONTROL;
     ok->code = OK;
@@ -66,7 +67,8 @@ void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgS
     ok->seqNum = seqNum;
     ok->msgSize = msgSize;
     /* start to send.. */
-    if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
+    printf("asdf");
+    if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server)) != sizeof(struct control_t))
     {
         DieWithError("sendto() sent a different number of bytes than expected");
     }
@@ -282,6 +284,7 @@ int main(int argc, char *argv[])
     if (argc >= 2)
     {
         servPort = atoi(argv[1]); /* local port */
+        printf("%s",argv[1] );
     }
     else
     {
@@ -302,10 +305,12 @@ int main(int argc, char *argv[])
     memset(&servAddr, 0, sizeof(servAddr));     /* Zero out structure */
     servAddr.sin_family = AF_INET;              /* Internet address family */
     servAddr.sin_addr.s_addr = htonl(INADDR_ANY);/* Any incoming interface */
-    servAddr.sin_port = htonl(servPort);        /* Local port */
+    servAddr.sin_port = htons(servPort);        /* Local port */
 
     /* create buffer to store packets. 1600 maximum of packet size */
     buffer = (struct control_t*)calloc((size_t)MAX_BUFFER, 1);
+    ok = (struct control_t*)calloc((size_t)MAX_BUFFER, 1);
+    dataAck = (struct ACK_t*)calloc((size_t)MAX_BUFFER, 1);
 
 
     /* Bind to the local address */
@@ -318,9 +323,9 @@ int main(int argc, char *argv[])
     for (;;) 
     {
         cliAddrLen = sizeof(clntAddr);
-
+        printf(" success!!\n");
         /* Block until receive message from a client */
-        if ((recvMsgSize = recvfrom(sock, buffer, sizeof(struct control_t) + 1600, 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
+        if ((recvMsgSize = recvfrom(sock, buffer, sizeof(struct control_t), 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
         {
             printf("Failure on recvfrom, client: %s, errno:%d\n", inet_ntoa(clntAddr.sin_addr), errno);
             continue;
@@ -346,10 +351,6 @@ int main(int argc, char *argv[])
                                     bindIP = clntAddr.sin_addr.s_addr;
                                     CxID = buffer->CxID;
                                     bindMsgSize = ntohl(buffer->msgSize);
-                                    sendOk(sock, &clntAddr, 
-                                            buffer->seqNum,
-                                            buffer->msgSize
-                                          );
                                     printf("start:\n");
                                     printf("length:%d\n", ntohs(buffer->msgLength));
                                     printf("type:%d\n", (int)buffer->msgType);
@@ -357,6 +358,10 @@ int main(int argc, char *argv[])
                                     printf("Cxid:%d\n", ntohl(buffer->CxID));
                                     printf("Seq#:%d\n", ntohl(buffer->seqNum));
                                     printf("size:%d\n", ntohs(buffer->msgSize));
+                                    sendOk(sock, &clntAddr, 
+                                            buffer->seqNum,
+                                            buffer->msgSize
+                                          );
                                 }
                                 break;
                             }
