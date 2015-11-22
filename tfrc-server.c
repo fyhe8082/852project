@@ -104,7 +104,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->T_delay = data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp;
     dataAck->lossRate = lossRate;
     //multi 1000 then take the floor for recvRate
-    dataAck->recvRate = (uint32_t)(getRecvCount(mylog, (data->timeStamp - RTT))*1000/RTT);
+    dataAck->recvRate = (uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT);
     /* start to send.. */
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
     {

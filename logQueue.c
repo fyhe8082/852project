@@ -183,15 +183,15 @@ int getIndexAfter(QUEUE *pq, uint32_t S_loss)
     }
 }
 
-int getRecvCount(QUEUE *pq, uint64_t timeLine)
+int getRecvBits(QUEUE *pq, uint64_t timeLine)
 {
-   int count = 0;
+   int Bytes = 0;
    int tail = pq->front;
    
    while(tail != pq->rear)
    {
        if (pq->qBase[tail]->timeArrived > timeLine)
-           count++;
+           Bytes += pq->qBase[tail]->packet->msgLength;
    } 
-   return count;
+   return Bytes*8;
 }
