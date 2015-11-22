@@ -26,8 +26,8 @@ static struct control_t *ok = NULL;
 static struct data_t *data = NULL;
 static struct ACK_t *dataAck = NULL;
 static uint32_t CxID;
-static uint32_t lossRate;
-static uint32_t recvRate;
+static uint32_t lossRate = 0;
+static uint32_t recvRate = 0;
 /*the newest RTT*/
 static uint32_t RTT;
 /*the struct for store the receive history*/
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
     uint8_t code;
 
     /*init the Queue used for receive history*/
-    initQueue(mylog);
+    //initQueue(mylog);
 
 
     /* Check for correct number of parameters */ 
@@ -326,6 +326,8 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        printf("received success!!\n");
+        
         /* Parsing the packet */
         msgType = buffer -> msgType;
         code = buffer -> code;
