@@ -92,7 +92,8 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
     dataAck->T_delay = data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp;
     dataAck->lossRate = lossRate;
-    dataAck->recvRate = (uint32_t)(getRecvCount(mylog, (data->timeStamp - RTT))/RTT);
+    //multi 1000 then take the floor for recvRate
+    dataAck->recvRate = (uint32_t)(getRecvCount(mylog, (data->timeStamp - RTT))*1000/RTT);
     /* start to send.. */
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
     {
@@ -244,7 +245,7 @@ void compute()
        I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n));
    I_tot = max(I_tot0, I_tot1);
    I_mean = I_tot/W_tot;
-   lossRate = 1/I_mean;
+   lossRate = (uint32_t)(1/I_mean)*1000;
 }
 
 uint64_t max(uint64_t i1, uint64_t i2)
