@@ -31,7 +31,11 @@ void enQueue(QUEUE *pq , struct logEntry *value);
 bool isemptyQueue(QUEUE *pq);
 bool is_fullQueue(QUEUE *pq);
 void deQueue(QUEUE *pq , struct logEntry *value);
-void traverseQueue( QUEUE *pq);
+uint32_t getMax3SeqNum(QUEUE *pq)
+int existSeqNum(QUEUE *pq, uint32_t seqNum)
+int getIndexBefore(QUEUE *pq, uint32_t S_loss)
+int getIndexAfter(QUEUE *pq, uint32_t S_loss)
+int getRecvCount(QUEUE *pq, uint64_t timeLine)
 
 /*External loss record operate function*/
 int pop(node_t ** head); 
