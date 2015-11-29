@@ -40,7 +40,6 @@ void setupTcpConnection() {
 	// resolve dotted decimal address
 	if(tfrc_client.servAddr.sin_addr.s_addr == -1) {
 		tfrc_client.thehost = gethostbyname(tfrc_client.servIP);
-		printf("%s", tfrc_client.thehost);
 		tfrc_client.servAddr.sin_addr.s_addr = *((unsigned long *) tfrc_client.thehost->h_addr_list[0]);
 	}
 	
@@ -58,11 +57,6 @@ void setupCntrlMsg(char* buffer, uint16_t msgSize) {
 	startPtr->CxID = htonl(OK);
 	startPtr->seqNum = htonl(rand()%MAXSEQ);  // limit the max to avoid overflow
 	startPtr->msgSize = htons(msgSize);
-    int i;
-	for(i = 0; i < CNTRLMSGSIZE; i++)
-	printf("%d\n", *buffer);
-	printf("%d", startPtr->seqNum);
-	printf("====%s\n", buffer);
 }
 void setupDataMsg() {
 
