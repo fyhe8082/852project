@@ -36,6 +36,7 @@
 #define START (0x01)
 #define STOP (0x02)
 #define OK (0x03)
+#define REDO (0x04)
 
 /* Message length */
 #define MSGMAX 4096
