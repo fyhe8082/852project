@@ -15,6 +15,9 @@
 #define DATAMAX 1500
 #define MAXINITTRY 10
 #define MEG 1000000.0
+#define TIMESTAMPWINDOW 10
+#define t_mbi 64.0 // t_mbi  = 64 seconds in usec
+
 #define true 1
 #define false 0
 typedef enum {
@@ -40,6 +43,7 @@ struct ClientPrms {
 	uint32_t msgSize;        /* message size in bytes */
 	float simulatedLossRate;
 	double maxAllowedThroughput;
+	double timebetnPackets; // packet scheduling time duration
 	double X_calc;
 	double X_trans;  // allowed transmit rate in bytes/s
 	double X_bps;    // average tramsmit rate in bytes/s
@@ -57,11 +61,16 @@ struct ClientPrms {
 	double sessionTime;
 	struct sigaction displaytimer;
 	double numDropped;
+	double latestPktTimestamp;
 
+	double numSent;
 	uint32_t cntrlTimeout; // timeout value for control message, default = 10 sec
 	uint32_t cntrlTimeoutCounter; //count at most 10 times for control msg
-	double noFeedbackTimer;
+	double noFeedbackTimer; // start of no feedback interval
 	int feedbackRecvd;
+	uint32_t sequencenum;
+	uint32_t expectedACK;
+	double timestore[TIMESTAMPWINDOW]; // for storing last 10 Time stamps
 };
 
 

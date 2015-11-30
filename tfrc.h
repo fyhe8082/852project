@@ -41,7 +41,7 @@
 #define MSGMAX 4096
 #define CONT_LEN 14
 #define ACK_LEN 32
-#define DATA_HANDER_len 24
+#define DATA_HEADER_LEN 24
 
 /* Flow control params */
 #define N_MAX 8
@@ -64,7 +64,7 @@ struct data_t {
     uint32_t seqNum;    /* Sequence Number */
     uint64_t timeStamp; /* TimeStamp */
     uint32_t RTT;       /* Sender's RTT Estimate (in microsecond) */
-    uint8_t  X[0];      /* Holds Msg Data */
+    uint8_t*  X;      /* Holds Msg Data */
 };
 
 /* Considered as ACK Message Format */

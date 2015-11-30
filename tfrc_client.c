@@ -22,7 +22,10 @@
 #include <time.h>
 #include <pthread.h>
 #include <semaphore.h>
+
 #include "tfrc_client.h"
+
+#define PACKETDROP(p) ((double)rand()*1.0/RAND_MAX) < p ? 0 : 1  //  p=0 would be taken for no packet drop
 
 sem_t lock;
 
@@ -61,16 +64,19 @@ void *thread_receive()
         switch(cStatus)
         {
         case CLIENT_START:
-            if((receivedStrLen = recvfrom(tfrc_client.sock, startBuffer, MSGMAX, 0,
-                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE)
-                    printf(" Receive Error from Server at CLIENT_START !!\n");
-
+           // if((receivedStrLen = recvfrom(tfrc_client.sock, startBuffer, MSGMAX, 0,
+                //                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE){
+ 	       if((receivedStrLen = recvfrom(tfrc_client.sock, startBuffer, MSGMAX, 0,
+                                         (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) < 0){
+		//printf("%ld--%d\n", receivedStrLen, CNTRLMSGSIZE);                    
+		printf(" Receive Error from Server at CLIENT_START !!\n");
+	    }
             else
             {
-		
 		struct control_t *startPtr = (struct control_t *) startBuffer;
                 // check for correctness of the received ACK.
-                
+                printf("%d--%d\n", startPtr->msgType, startPtr->code);   
+	
                 if(startPtr->msgType == CONTROL && startPtr->code==OK) //  server responded
                 {	
                     cStatus = CLIENT_SENDING; // state change
@@ -92,9 +98,7 @@ void *thread_receive()
                         DieWithError("sigaction failed for sigalarm");
                     ualarm(500000,0); //  start the alarm with 2 seconds
                     
-                    
-
-
+               
                 }
             }
             break;
@@ -198,25 +202,37 @@ void setupTcpConnection() {
 		DieWithError("socket() failed");
 }
 
-void setupCntrlMsg(char* buffer, uint16_t msgSize) {
+int setupCntrlMsg(char* buffer, uint16_t msgSize, uint32_t cxid) {
 	struct control_t *startPtr = (struct control_t *) buffer;
 	startPtr->msgLength = CNTRLMSGSIZE;
 	startPtr->msgType = CONTROL;
 	startPtr->code = START;
-	startPtr->CxID = htonl(OK);
+	startPtr->CxID = htonl(cxid);
 	startPtr->seqNum = htonl(rand()%MAXSEQ);  // limit the max to avoid overflow
 	startPtr->msgSize = htons(msgSize);
+	return ntohl(startPtr->seqNum);
 }
-void setupDataMsg() {
-
+void setupDataMsg(char* buffer, uint16_t msgSize, uint32_t seqnum, uint32_t cxid) {
+	struct data_t *dataPtr = (struct data_t *) buffer;
+	dataPtr->msgLength = htons(msgSize+DATA_HEADER_LEN);
+	dataPtr->msgType = DATA;
+	dataPtr->code = OK;
+	dataPtr->CxID = htonl(cxid);
+	dataPtr->seqNum = htonl(seqnum);  // limit the max to avoid overflow
+	
+	//dataPtr->timeStamp = ;
+	//dataPtr->RTT = ? ;
+	dataPtr->X = (char *) calloc(msgSize, sizeof(char));
 }
 
-void setupAckMsg() {
-
+void setupAckMsg(char* buffer) {
+	struct ack_t *ackPtr = (struct ack_t *) buffer;
 }
 int main(int argc, char *argv[]) {
     printf("client start!\n");
 	struct sigaction initialtimer;
+
+	pthread_t *thread1;
 
 	if(argc != 7) {
 		fprintf(stderr, "Usage: [<tfrc-client> <destinationAddress> <destinationPort> <messageSize> <connectionID> <simulatedLossRate> <maxAllowedThroughput>]\n");
@@ -233,10 +249,15 @@ int main(int argc, char *argv[]) {
 	//Sender Initialize Parameters
 	initializeparams();
 	setupTcpConnection();
-	setupCntrlMsg(startBuffer, tfrc_client.msgSize);
+	
+	tfrc_client.sequencenum = setupCntrlMsg(startBuffer, tfrc_client.msgSize, tfrc_client.connectionID);
+	tfrc_client.expectedACK = tfrc_client.sequencenum+1;
 
-	setupDataMsg();
-	setupAckMsg();
+	setupDataMsg(dataBuffer, tfrc_client.msgSize, tfrc_client.sequencenum,tfrc_client.connectionID);
+	setupAckMsg(ackBuffer);
+ 
+	//Initialize the semaphore
+    	sem_init(&lock, 0, 0);
 
 	initialtimer.sa_handler = catchCntrlTimeout;
 	if(sigfillset(&initialtimer.sa_mask) < 0)
@@ -249,15 +270,22 @@ int main(int argc, char *argv[]) {
 	// CTRL+C interrupt setup
 	signal(SIGINT, CNTCCatch);
 
-   tfrc_client.alarmtimeout = true;
-   tfrc_client.feedbackRecvd = false;
+	// thread out the receive process..
+
+    	thread1 = (pthread_t*) calloc(1,sizeof(pthread_t));
+
+   	if(pthread_create(thread1,NULL,thread_receive,NULL))
+       		DieWithError("receive thread creation error!");
+
+   	tfrc_client.alarmtimeout = true;
+   	tfrc_client.feedbackRecvd = false;
 
 	while(true) {
 		switch(cStatus) {
 		case CLIENT_START:
 			if(tfrc_client.alarmtimeout) {
 				printf("send control----\n");
-				alarm(0);
+				alarm(0); 
 				if(sendto(tfrc_client.sock, startBuffer, CNTRLMSGSIZE, 0, (struct sockaddr *)
 						&(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != CNTRLMSGSIZE) {
 					printf("%ld\n", sizeof(tfrc_client.servAddr));
@@ -266,8 +294,75 @@ int main(int argc, char *argv[]) {
 				tfrc_client.alarmtimeout = false;
 				alarm(tfrc_client.cntrlTimeout); // start the timeout
 			}
+			break;
 		case CLIENT_SENDING:
+					usec2 = get_time() * MEG; // returns double in seconds so times MEG
 
+            		if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
+                
+                		if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
+                
+					//if(tfrc_client.expectedACK+9 == tfrc_client.sequencenum)
+					//continue;
+						sem_wait(&lock);
+						struct data_t *dataPtr = (struct data_t*)dataBuffer;
+						dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
+						tfrc_client.latestPktTimestamp = get_time() * MEG;
+						dataPtr->timeStamp = htond(tfrc_client.latestPktTimestamp); //  time now in usec
+						dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
+						tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
+                    
+                    if ( tfrc_client.feedbackRecvd == true) {
+						tfrc_client.noFeedbackTimer = get_time() *MEG + tfrc_client.t_RTO; // reset the timer
+						tfrc_client.feedbackRecvd = false;
+					}
+				
+                    if(PACKETDROP(tfrc_client.simulatedLossRate)==1)
+                    {
+                        if (sendto(tfrc_client.sock, dataBuffer, dataPtr->msgLength, 0, (struct sockaddr *)
+                           &(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != dataPtr->msgLength)
+                            DieWithError("sendto() sent a different number of bytes than expected");
+                    }
+                    else 
+                    { 
+						tfrc_client.numDropped++;
+                    }
+                    
+                    tfrc_client.numSent++;
+                    usec1 = get_time() *MEG;
+                    sem_post(&lock);
+                }
+                else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false) // no feed back timer interrupts
+                {	
+					sem_wait(&lock);
+					
+                    if(tfrc_client.R>0.0) // if there has been feedback beforehand
+                    {
+                        if(tfrc_client.X_calc>=tfrc_client.X_recv*2)
+                            tfrc_client.X_recv = fmax(tfrc_client.X_recv/2,tfrc_client.msgSize*8.0/(2*t_mbi));
+                        else
+                            tfrc_client.X_recv = tfrc_client.X_calc/4;
+
+                        newsendingrate();
+                    }
+                    else
+                    {
+                        tfrc_client.X_trans = fmax(tfrc_client.X_trans/2,tfrc_client.msgSize*8.0/t_mbi);
+                    }
+                    
+                    tfrc_client.sequencenum = tfrc_client.expectedACK-1; // look for the last ack received 
+
+                    tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
+                    
+                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
+                    tfrc_client.noFeedbackTimer = get_time() * MEG + tfrc_client.t_RTO; // update the nofeedbacktimer
+                    tfrc_client.feedbackRecvd = true;
+                    sem_post(&lock);
+
+                }
+
+            }
+ 
 			break;
 		case CLIENT_STOP:
 
