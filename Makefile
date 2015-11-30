@@ -1,6 +1,14 @@
 
-all: tfrc-client
+all: tfrc-client tfrc-server
 
+tfrc-server:
+
+tfrc-server.o: tfrc-server.c
+	gcc -Wall -o tfrc-server.o -c tfrc-server.c
+logQueue.o: logQueue.c
+	gcc -Wall -o logQueue.o -c logQueue.c
+lossLList.o: lossLList.c
+	gcc -Wall -o lossLList.o -c lossLList.c
 tfrc-client: tfrc-client.o tfrc.o clientresources.o
 	gcc -Wall -o tfrc-client tfrc-client.o tfrc.o clientresources.o 
 

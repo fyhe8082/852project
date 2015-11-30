@@ -5,6 +5,8 @@
     > Created Time: Sat 7 Nov 2015 06:45:17 PM EST
  ************************************************************************/
 #include "tfrc.h"
+#include <sys/time.h>
+#include <signal.h>
 
 #define CNTRLMSGSIZE 14
 #define ACKMSGSIZE 36
@@ -12,6 +14,7 @@
 #define MAXSEQ 10000
 #define DATAMAX 1500
 #define MAXINITTRY 10
+#define MEG 1000000.0
 #define true 1
 #define false 0
 typedef enum {
@@ -37,6 +40,7 @@ struct ClientPrms {
 	uint32_t msgSize;        /* message size in bytes */
 	float simulatedLossRate;
 	double maxAllowedThroughput;
+	double X_calc;
 	double X_trans;  // allowed transmit rate in bytes/s
 	double X_bps;    // average tramsmit rate in bytes/s
 	double X_recv;   // rate seen by receiver
@@ -50,7 +54,9 @@ struct ClientPrms {
 	uint16_t b;     // max number of packets acknowledged by a single TCP ACK, default=1
 	
 	int alarmtimeout;
-
+	double sessionTime;
+	struct sigaction displaytimer;
+	double numDropped;
 
 	uint32_t cntrlTimeout; // timeout value for control message, default = 10 sec
 	uint32_t cntrlTimeoutCounter; //count at most 10 times for control msg
@@ -66,5 +72,7 @@ struct ACK_t ack;
 struct ClientPrms tfrc_client;
 ClientStatus cStatus;
 int CNTCStop;
+
+double usec1, usec2,usec3,usec4;
 
 void initializeparams();

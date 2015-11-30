@@ -2,7 +2,9 @@
     > File Name: tfrc_client.c
     > Author: Xubin Zhuge
     > Mail: xzhuge@clemson.edu 
-    > Created Time: Sun 07 Nov 2015 06:46:18 PM EST
+    > Created Time: Sun 07 Nov 2015 06:46:18 PM EST	
+    > Description: Main program send datagram to server and a thread receive 
+      data from server simultaneously.
  ************************************************************************/
 
 #include <stdio.h>
@@ -13,12 +15,27 @@
 #include <sys/socket.h> /* for socket(), connect(), sendto(), and recvfrom() */
 #include <arpa/inet.h> /* for sockaddr_in, inet_addr() */
 #include <netdb.h>
+#include <unistd.h> 
+#include <math.h>
 #include <signal.h>
+#include <sys/time.h>
+#include <time.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include "tfrc_client.h"
+
+sem_t lock;
 
 char startBuffer[CNTRLMSGSIZE+1];
 char dataBuffer[DATAHEADERSIZE+DATAMAX];
 char ackBuffer[ACKMSGSIZE+1];
+
+void printruntime(int ignored)
+{	
+    printf("%-11.2f %-8.2f %-11.2f %-8.2f %-8.2f %-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R,tfrc_client.t_RTO,tfrc_client.p);
+    
+    ualarm(500000,0); // reset for next 0.5 second
+}
 
 void catchCntrlTimeout(int ignored) {
 	tfrc_client.alarmtimeout = true;
@@ -26,11 +43,143 @@ void catchCntrlTimeout(int ignored) {
 		DieWithError(" Client: Server Initialize Failed, server not responding");
 	alarm(0);
 }
+
 void CNTCCatch(int ignored) {
 	sleep(1);
 	cStatus = CLIENT_STOP;
 	tfrc_client.feedbackRecvd = false;
 }
+
+/***************** thread for receiving data*********************/ 
+void *thread_receive()
+{
+    long receivedStrLen;
+    tfrc_client.servAddrLen = sizeof(tfrc_client.servAddr);
+
+    while(1)
+    {
+        switch(cStatus)
+        {
+        case CLIENT_START:
+            if((receivedStrLen = recvfrom(tfrc_client.sock, startBuffer, MSGMAX, 0,
+                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE)
+                    printf(" Receive Error from Server at CLIENT_START !!\n");
+
+            else
+            {
+		
+		struct control_t *startPtr = (struct control_t *) startBuffer;
+                // check for correctness of the received ACK.
+                
+                if(startPtr->msgType == CONTROL && startPtr->code==OK) //  server responded
+                {	
+                    cStatus = CLIENT_SENDING; // state change
+                    tfrc_client.sessionTime = get_time()*MEG;
+                    
+                    tfrc_client.feedbackRecvd = true; // to start packet transfer
+                    
+                    usec1 = 0; // start the transmission timer
+
+                    /*** Recurring results Display Alarm timer setup *****/
+
+                    tfrc_client.displaytimer.sa_handler = printruntime;
+                    if (sigfillset(&tfrc_client.displaytimer.sa_mask) < 0)
+                        DieWithError("sigfillset() failed");
+
+                    tfrc_client.displaytimer.sa_flags = 0;
+
+                    if (sigaction(SIGALRM, &tfrc_client.displaytimer, 0) < 0)
+                        DieWithError("sigaction failed for sigalarm");
+                    ualarm(500000,0); //  start the alarm with 2 seconds
+                    
+                    
+
+
+                }
+            }
+            break;
+        case CLIENT_SENDING:
+           /* if((receivedStrLen = recvfrom(tfrc_client.sock, ack.ackmessage, MSGMAX, 0,
+                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != ACKMSGSIZE)
+                    printf(" Receive Error from Server at CLIENT_START !!\n");
+            else
+            {		
+				tfrc_client.numReceived++;
+				
+                if(*ack.msgType == ACK && *ack.msgCode == OK)
+                {
+                    sem_wait(&lock);
+                    tfrc_client.lastAckreceived = ntohl(*(ack.ackNum)); // assuming receiver responds to most recent ACK
+                    
+                    
+                    if(tfrc_client.lastAckreceived >= tfrc_client.expectedACK){
+						tfrc_client.feedbackRecvd = true; 
+						tfrc_client.expectedACK=tfrc_client.lastAckreceived+1;
+						
+					}
+					else
+					{
+						
+					}
+                    sem_post(&lock);
+						 
+                    tfrc_client.t_now = get_time()*MEG;
+
+                    tfrc_client.t_recvdata = tfrc_client.timestore[ntohl(*(ack.seqnumrecvd))%TIMESTAMPWINDOW];
+                    tfrc_client.t_delay = (double)ntohl(*(ack.t_Delay)); //  CHECK is t_delay in microseconds
+                    tfrc_client.X_recv = (double)(ntohl(*(ack.receiveRate))/1000.0);
+                    tfrc_client.p = (float)ntohl(*(ack.lossEventRate))/1000.0; // server sets p in int
+                    tfrc_client.R_sample = (tfrc_client.t_now-tfrc_client.t_recvdata) ; //  CHANGES :: twice then in theory
+				
+		    tfrc_client.lossEventCounter +=tfrc_client.p;
+						
+						
+                    if(tfrc_client.R_rtt == 0.0) //  usually the case for the first feedback
+                        tfrc_client.R_rtt = tfrc_client.R_sample;
+                    else
+                        tfrc_client.R_rtt = 0.9 * tfrc_client.R_rtt + 0.1 * tfrc_client.R_sample; // averaging funtion
+ 
+                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R_rtt,2*tfrc_client.s_msgSize*8.0/tfrc_client.X_trans);
+
+                    newsendingrate(); //calculate new sending rate
+                    
+                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R_rtt,2*tfrc_client.s_msgSize*8.0/tfrc_client.X_trans); //  recalculate
+                    
+                    tfrc_client.timebetnPackets = tfrc_client.s_msgSize * 8.0 / tfrc_client.X_trans;
+                    
+                }
+            }*/
+            break;
+        case CLIENT_STOP:
+          /*  if((receivedStrLen = recvfrom(tfrc_client.sock, cntrl.controlmessage, MSGMAX, 0,
+                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE)
+                    printf(" Receive Error from Server from CLIENT_STOP !!\n");
+
+            else
+            {
+                // check for correctness of the received ACK.
+                if(*cntrl.msgType == CONTROL && *cntrl.msgCode==OK) //  server responded
+                {
+                    
+                    tfrc_client.feedbackRecvd = true; // to start packet transfer
+
+
+                    CNTCStop=true;
+                    pthread_exit(NULL);
+
+                    break;// break the while loop
+
+
+                }
+            }
+	*/
+		break;
+        }
+    }
+
+
+}
+
 
 void setupTcpConnection() {
 	memset(&(tfrc_client.servAddr), 0, sizeof(tfrc_client.servAddr)); 

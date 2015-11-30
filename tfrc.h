@@ -38,10 +38,13 @@
 #define OK (0x03)
 
 /* Message length */
+#define MSGMAX 4096
 #define CONT_LEN 14
 #define ACK_LEN 32
 #define DATA_HANDER_len 24
 
+/* Flow control params */
+#define N_MAX 8
 /* Considered as Control Message */
 struct control_t {
     uint16_t msgLength; /* Msg Length */
