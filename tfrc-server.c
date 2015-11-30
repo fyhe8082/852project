@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <inttypes.h> // for print uint64
 #include <sys/time.h>
 #include <stdbool.h>
 #include "tfrc.h"
@@ -30,7 +31,7 @@ struct sockaddr_in clntAddr; /* Client address */
 static uint32_t CxID;
 static uint32_t lossRate = 0;
 static uint32_t preLossRate = 0;
-static uint32_t recvRate = 0;
+//static uint32_t recvRate = 0;
 
 /*var for output*/
 static int countRecv = 0;
@@ -122,6 +123,9 @@ void enQueueAndCheck(struct data_t *data)
     entry->packet = data;
     gettimeofday(&tv, NULL);
     entry->timeArrived = 1000000 * tv.tv_sec + tv.tv_usec; 
+    printf("%" PRIu64 "\n",entry->timeArrived);
+    printf("%" PRIu64 "\n",tv.tv_sec);
+    printf("%" PRIu64 "\n",tv.tv_usec);
     enQueue(mylog, entry);
     /*if it is a packet used to be a loss one at receiver*/
     if (remove_by_seqNum(&lossRecord, data->seqNum)!=-1)
@@ -195,6 +199,8 @@ float getWeight(int i, int I_num)
         w_i = 1;
     else
         w_i = 1-(i-(I_num/2-1))/(I_num/2+1);
+
+    return w_i;
 }
 
 /*correct the start loss event mark and compute the lossrate*/
@@ -385,7 +391,7 @@ int main(int argc, char *argv[])
                                     bindPort = clntAddr.sin_port;
                                     bindIP = clntAddr.sin_addr.s_addr;
                                     CxID = buffer->CxID;
-                                    bindMsgSize = ntohl(buffer->msgSize);
+                                    bindMsgSize = ntohs(buffer->msgSize);
                                     printf("start:\n");
                                     printf("length:%d\n", ntohs(buffer->msgLength));
                                     printf("type:%d\n", (int)buffer->msgType);
