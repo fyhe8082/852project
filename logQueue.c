@@ -70,7 +70,16 @@ void enQueue(QUEUE *pq , struct logEntry *value)
     if(is_fullQueue(pq))
         deQueue(pq, value);
 
-    pq->qBase[pq->rear] = value;
+    pq->qBase[pq->rear]->timeArrived = value->timeArrived;
+    pq->qBase[pq->rear]->packet->msgLength = value->packet->msgLength;
+    pq->qBase[pq->rear]->packet->msgType = value->packet->msgType;
+    pq->qBase[pq->rear]->packet->code = value->packet->code;
+    pq->qBase[pq->rear]->packet->CxID = value->packet->CxID;
+    pq->qBase[pq->rear]->packet->seqNum = value->packet->seqNum;
+    pq->qBase[pq->rear]->packet->timeStamp = value->packet->timeStamp;
+    pq->qBase[pq->rear]->packet->RTT = value->packet->RTT;
+/*
+        //pq->qBase[i]->packet->X = (uint8_t)malloc(sizeof(uint8_t));*/
     pq->rear = (pq->rear + 1)%MAXN ;
     //printf("\n %d ?? \n" , value);
 
