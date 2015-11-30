@@ -11,6 +11,7 @@
 #include "tfrc_client.h"
 #include <math.h>
 #include <sys/time.h>
+#include "clientresources.h"
 
 /* Returns time in seconds with precision down to micresecond */
 double get_time() {

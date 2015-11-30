@@ -59,6 +59,7 @@ void *thread_receive()
     long receivedStrLen;
     tfrc_client.servAddrLen = sizeof(tfrc_client.servAddr);
 
+	printf("%d", tfrc_client.servAddrLen);
     while(1)
     {
         switch(cStatus)
@@ -317,23 +318,35 @@ int main(int argc, char *argv[]) {
 						tfrc_client.feedbackRecvd = false;
 					}
 				
-                    if(PACKETDROP(tfrc_client.simulatedLossRate)==1)
-                    {
-                        if (sendto(tfrc_client.sock, dataBuffer, dataPtr->msgLength, 0, (struct sockaddr *)
-                           &(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != dataPtr->msgLength)
-                            DieWithError("sendto() sent a different number of bytes than expected");
-                    }
-                    else 
+                  //  if(PACKETDROP(tfrc_client.simulatedLossRate)==1)
+                   // {
+						tfrc_client.servAddrLen = sizeof(tfrc_client.servAddr);
+						printf("----%d\n",tfrc_client.servAddrLen);
+
+						uint16_t sendsize = ntohs(dataPtr->msgLength);
+                        if (sendto(tfrc_client.sock, dataBuffer, sendsize, 0, (struct sockaddr *)
+                           &(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != sendsize){
+							printf("failed");
+						//	printf("%s", tfrc_client.servAddr);
+							DieWithError("sendto() sent a different number of bytes than expected....");
+
+						}
+	
+
+                   // }
+                   /* else 
                     { 
+						printf("sending data");
 						tfrc_client.numDropped++;
-                    }
+                    }*/
                     
                     tfrc_client.numSent++;
                     usec1 = get_time() *MEG;
                     sem_post(&lock);
                 }
                 else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false) // no feed back timer interrupts
-                {	
+                {
+					printf("no feed back timer interrupts\n");
 					sem_wait(&lock);
 					
                     if(tfrc_client.R>0.0) // if there has been feedback beforehand
