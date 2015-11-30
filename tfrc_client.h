@@ -5,6 +5,7 @@
     > Created Time: Sat 7 Nov 2015 06:45:17 PM EST
  ************************************************************************/
 #include "tfrc.h"
+#include "clientresources.h"
 #include <sys/time.h>
 #include <signal.h>
 
