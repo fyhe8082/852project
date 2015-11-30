@@ -53,6 +53,14 @@ void newsendingrate()
 }
 
 
+
+
+
+
+
+
+
+
 //Converts 8 bytes from host byte order to network byte order
 double htond(double host)
 {
