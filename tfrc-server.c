@@ -108,7 +108,12 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->T_delay = data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp;
     dataAck->lossRate = lossRate;
     //multi 1000 then take the floor for recvRate
+    if (RTT == 0){
+        printf("\nRTT equals 0. exited\n");
+        exit(0);
+    }
     dataAck->recvRate = (uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT);
+    printf("start to send ack\n");
     /* start to send.. */
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
     {
@@ -123,9 +128,9 @@ void enQueueAndCheck(struct data_t *data)
     entry->packet = data;
     gettimeofday(&tv, NULL);
     entry->timeArrived = 1000000 * tv.tv_sec + tv.tv_usec; 
-    printf("%" PRIu64 "\n",entry->timeArrived);
-    printf("%" PRIu64 "\n",tv.tv_sec);
-    printf("%" PRIu64 "\n",tv.tv_usec);
+    //printf("%" PRIu64 "\n",entry->timeArrived);
+    //printf("%" PRIu64 "\n",tv.tv_sec);
+    //printf("%" PRIu64 "\n",tv.tv_usec);
     enQueue(mylog, entry);
     /*if it is a packet used to be a loss one at receiver*/
     if (remove_by_seqNum(&lossRecord, data->seqNum)!=-1)
@@ -147,7 +152,7 @@ void updateLoss ()
 
     //if (higher==3)        add to lossRecord;
     if (mylog->rear-3 <= mylog->front)
-        exit(0);
+        return;
 
     /*get the third biggest seqNum*/
     uint32_t num = getMax3SeqNum(mylog);
@@ -155,7 +160,7 @@ void updateLoss ()
     int index;
 
     /*add all packets(not received) that have exactly 3 higher packet seqNum*/
-    for (i=1;i<=MAXN-3;i++)
+    for (i=1;i<=(mylog->rear-mylog->front)-3;i++)
     {
         index = existSeqNum(mylog, num-i);
         if (index == -1)
@@ -182,6 +187,10 @@ uint64_t T_lossCompute(uint32_t S_loss)
     uint64_t T_before = mylog->qBase[index_before]->timeArrived;
     uint64_t T_after = mylog->qBase[index_after]->timeArrived;
 
+    if ((S_after - S_before)==0){
+        printf("(S_after - S_before)==0 exited\n%d %d\n", S_after, S_before);
+        exit(0);
+    }
     T_loss = T_before + ((T_after - T_before) * (S_loss - S_before) / (S_after - S_before));
 
     return T_loss;
@@ -310,6 +319,10 @@ int main(int argc, char *argv[])
     /*init loss Record*/
     lossRecord = (node_t *)malloc(sizeof(node_t));
 
+    /*init entry*/
+    entry = (struct logEntry *)malloc(sizeof(struct logEntry));
+    entry->packet = (struct data_t*)malloc(sizeof(struct data_t));
+
     /* Check for correct number of parameters */ 
     if (argc >= 2)
     {
@@ -354,7 +367,7 @@ int main(int argc, char *argv[])
     for (;;) 
     {
         cliAddrLen = sizeof(clntAddr);
-        printf(" success!!\n");
+        //printf(" success!!\n");
         /* Block until receive message from a client */
         if ((recvMsgSize = recvfrom(sock, buffer, sizeof(struct control_t), 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
         {
@@ -362,7 +375,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        printf("received success!!\n");
+        //printf("received success!!\n");
         countRecv++;
         countRecvBytes += recvMsgSize;
         if(buffer->seqNum > seqMax)
@@ -379,6 +392,7 @@ int main(int argc, char *argv[])
                     {
                         case START :
                             {
+                                printf("received START!!\n");
                                 if (bindFlag == 0)
                                 {
                                     bindFlag = 1;
@@ -429,6 +443,7 @@ int main(int argc, char *argv[])
                 }
             case DATA :
                 {
+                    //printf("received DATA!!\n");
                     if (bindFlag == 1 
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
@@ -437,12 +452,14 @@ int main(int argc, char *argv[])
 
                         data = (struct data_t *)buffer;
                         RTT = data->RTT;
+                        RTT = 1000000;//for test
+                        alarm(1);
                         preLossRate = lossRate;
                         enQueueAndCheck(data);
                         if(lossRate > preLossRate)
                         {
                             sendDataAck(sock, &clntAddr);
-                            alarm(RTT/1000);
+                            alarm(RTT/1000000);
                         }
                         //send each receive
                         //else sendDataAck(sock, &clntAddr);
@@ -477,6 +494,6 @@ void sigHandler(int sig)
 void handle_alarm(int ignored)
 {
     sendDataAck(sock, &clntAddr);
-    alarm(RTT/1000);
+    alarm(RTT/1000000);
     return;
 }
