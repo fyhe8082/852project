@@ -31,6 +31,7 @@ struct sockaddr_in clntAddr; /* Client address */
 static uint32_t CxID;
 static uint32_t lossRate = 0;
 static uint32_t preLossRate = 0;
+int bindFlag = 0;            /* server bind with any client or not*/
 //static uint32_t recvRate = 0;
 
 /*var for output*/
@@ -76,12 +77,12 @@ void handle_alarm(int ignored);
 void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgSize)
 {
 
-    ok->msgLength = CONT_LEN;
+    ok->msgLength = htons(CONT_LEN);
     ok->msgType = CONTROL;
     ok->code = OK;
-    ok->CxID = CxID;
-    ok->seqNum = seqNum;
-    ok->msgSize = msgSize;
+    ok->CxID = htonl(CxID);
+    ok->seqNum = htonl(seqNum);
+    ok->msgSize = htons(msgSize);
     /* start to send.. */
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server)) != sizeof(struct control_t))
     {
@@ -98,22 +99,22 @@ void sendOk(int sock, struct sockaddr_in *server, uint32_t seqNum, uint16_t msgS
  * */
 void sendDataAck(int sock,struct sockaddr_in *server)
 {   
-    dataAck->msgLength = ACK_LEN;
+    dataAck->msgLength = htons(ACK_LEN);
     dataAck->msgType = ACK;
     dataAck->code = OK;
-    dataAck->CxID = CxID;
-    dataAck->ackNum = lossRecord->seqNum + 1; 
+    dataAck->CxID = htonl(CxID);
+    dataAck->ackNum = htonl(lossRecord->seqNum + 1); 
     gettimeofday(&tv, NULL);
     dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
-    dataAck->T_delay = data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp;
-    dataAck->lossRate = lossRate;
+    dataAck->T_delay = htonl(data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp);
+    dataAck->lossRate = htonl(lossRate);
     //multi 1000 then take the floor for recvRate
     if (RTT == 0){
         printf("\nRTT equals 0. exited\n");
         exit(0);
     }
-    dataAck->recvRate = (uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT);
-    printf("start to send ack\n");
+    dataAck->recvRate = htonl((uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT));
+    //printf("start to send ack\n");
     /* start to send.. */
     if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
     {
@@ -295,7 +296,6 @@ int main(int argc, char *argv[])
     unsigned short servPort;     /* Server port */
     struct sockaddr_in servAddr; /* Local address */
 
-    int bindFlag = 0;            /* server bind with any client or not*/
     uint8_t bindMsgSize;
 
     /* addr&port bind with */
@@ -328,7 +328,7 @@ int main(int argc, char *argv[])
     if (argc >= 2)
     {
         servPort = atoi(argv[1]); /* local port */
-        printf("%s",argv[1] );
+        //printf("%s",argv[1] );
     }
     else
     {
@@ -376,6 +376,10 @@ int main(int argc, char *argv[])
             continue;
         }
 
+        buffer->msgLength = ntohs(buffer->msgLength);
+        buffer->seqNum = ntohl(buffer->seqNum);
+        buffer->CxID = ntohl(buffer->CxID);
+        buffer->seqNum = ntohl(buffer->seqNum);
         //printf("received success!!\n");
         countRecv++;
         countRecvBytes += recvMsgSize;
@@ -393,7 +397,7 @@ int main(int argc, char *argv[])
                     {
                         case START :
                             {
-                                printf("received START!!\n");
+                                printf("\nreceived START!!\n\n");
                                 if (bindFlag == 0)
                                 {
                                     alarm(1);
@@ -408,13 +412,13 @@ int main(int argc, char *argv[])
                                     bindIP = clntAddr.sin_addr.s_addr;
                                     CxID = buffer->CxID;
                                     bindMsgSize = ntohs(buffer->msgSize);
-                                    printf("start:\n");
+                                    printf("start packet:\n");
                                     printf("length:%d\n", ntohs(buffer->msgLength));
                                     printf("type:%d\n", (int)buffer->msgType);
                                     printf("code:%d\n", (int)buffer->code);
                                     printf("Cxid:%d\n", ntohl(buffer->CxID));
                                     printf("Seq#:%d\n", ntohl(buffer->seqNum));
-                                    printf("size:%d\n", ntohs(buffer->msgSize));
+                                    printf("size:%d\n\n", ntohs(buffer->msgSize));
                                     sendOk(sock, &clntAddr, 
                                             buffer->seqNum,
                                             buffer->msgSize
@@ -428,13 +432,14 @@ int main(int argc, char *argv[])
                                         && bindIP == clntAddr.sin_addr.s_addr
                                         && bindPort == clntAddr.sin_port)
                                 {
-                                    printf("STOP msg received!\n\n");
+                                    printf("\nSTOP msg received!\n\n");
                                     sendOk(sock, &clntAddr, 
                                             buffer->seqNum,
                                             buffer->msgSize
                                           );
                                     //display the output information
                                     display();
+                                    bindFlag = 0;
                                 }
                                 break;
                             }
@@ -450,10 +455,10 @@ int main(int argc, char *argv[])
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
                     {
-                        printf("data recv\n");
-
                         data = (struct data_t *)buffer;
+                        data->RTT = ntohl(data->RTT);
                         RTT = data->RTT;
+                        printf("data %" PRIu32 " received\n", data->seqNum);
                         RTT = 1000000;//for test
                         preLossRate = lossRate;
                         enQueueAndCheck(data);
@@ -494,7 +499,9 @@ void sigHandler(int sig)
 
 void handle_alarm(int ignored)
 {
-    printf("enter alarm handler\n");
+    //printf("enter alarm handler\n");
+    if(bindFlag == 0)
+        return;
     sendDataAck(sock, &clntAddr);
     alarm(RTT/1000000);
     return;
