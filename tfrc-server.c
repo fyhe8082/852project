@@ -396,6 +396,7 @@ int main(int argc, char *argv[])
                                 printf("received START!!\n");
                                 if (bindFlag == 0)
                                 {
+                                    alarm(1);
                                     bindFlag = 1;
                                     //init the record var
                                     countRecv = 1;
@@ -454,7 +455,6 @@ int main(int argc, char *argv[])
                         data = (struct data_t *)buffer;
                         RTT = data->RTT;
                         RTT = 1000000;//for test
-                        alarm(1);
                         preLossRate = lossRate;
                         enQueueAndCheck(data);
                         if(lossRate > preLossRate)
