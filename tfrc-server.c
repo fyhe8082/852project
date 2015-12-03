@@ -218,7 +218,8 @@ void compute()
     /*correct the start loss parket mark*/ 
     node_t * p = lossRecord;
     p->isNewLoss = true;
-    uint64_t lossStart = p->timeArrived;
+    uint64_t lossStart;
+    lossStart = p->timeArrived;
     uint64_t interval = 0;
 
     /*compute the number of loss event*/
@@ -493,6 +494,7 @@ void sigHandler(int sig)
 
 void handle_alarm(int ignored)
 {
+    printf("enter alarm handler\n");
     sendDataAck(sock, &clntAddr);
     alarm(RTT/1000000);
     return;

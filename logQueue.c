@@ -221,7 +221,7 @@ int getRecvBits(QUEUE *pq, uint64_t timeLine)
    {
        if (pq->qBase[tail]->timeArrived > timeLine)
            Bytes += pq->qBase[tail]->packet->msgLength;
-       tail = (tail + 1);
+       tail = (tail + 1)%MAXN;
    } 
    return Bytes*8;
 }
