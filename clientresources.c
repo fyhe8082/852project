@@ -29,7 +29,7 @@ void initializeparams() {
 	tfrc_client.t_RTO = 2; // 2 secs 
 	tfrc_client.b = 1;  // one ACK per packet
 	tfrc_client.t_now = get_time();
-	tfrc_client.R = 0;
+	tfrc_client.R = 1000000;
 
 }
 
