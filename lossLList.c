@@ -29,7 +29,7 @@ int pop(node_t ** head) {
 }
 
 int remove_by_seqNum(node_t ** head, int seqNum) {
-    int i = 0;
+    //int i = 0;
     int retval = -1;
     node_t * current = *head;
     node_t * temp_node = NULL;
@@ -39,13 +39,20 @@ int remove_by_seqNum(node_t ** head, int seqNum) {
         return pop(head);
     }
 
-    while (current->next->seqNum != seqNum) {
+    if (current->next == NULL) {
+        return -1;
+    }
+
+    while (current->next != NULL && current->next->seqNum != seqNum) {
         if (current->next == NULL) {
             return -1;
         }
         current = current->next;
     }
 
+    if (current->next == NULL) {
+        return -1;
+    }
     temp_node = current->next;
     //if the deleted one is loss start, charge the next one to be loss start
     if (temp_node->isNewLoss==1)
