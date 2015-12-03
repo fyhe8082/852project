@@ -301,7 +301,7 @@ int main(int argc, char *argv[]) {
 
             	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
-            		if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
+            	if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
                 
 					//if(tfrc_client.expectedACK+9 == tfrc_client.sequencenum)
 					//continue;
@@ -338,8 +338,9 @@ int main(int argc, char *argv[]) {
                     tfrc_client.numSent++;
                     usec1 = get_time() *MEG;
                     sem_post(&lock);
-                }
-                else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false) // no feed back timer interrupts
+					}
+				}
+				else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false) // no feed back timer interrupts
                 {
 					printf("no feed back timer interrupts\n");
 					sem_wait(&lock);
