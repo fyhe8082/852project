@@ -66,6 +66,7 @@ struct ClientPrms {
 	double latestPktTimestamp;
 	double lastAckreceived;
 	uint32_t lossEventCounter;
+	double avgLossEvent;
 
 	double numSent;
 	double numReceived;
@@ -76,6 +77,9 @@ struct ClientPrms {
 	uint32_t sequencenum;
 	uint32_t expectedACK;
 	double timestore[TIMESTAMPWINDOW]; // for storing last 10 Time stamps
+	double avgLossEvents;
+	double avgThroughput;
+	int sendSTOP;
 };
 
 

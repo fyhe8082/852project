@@ -110,14 +110,16 @@ void *thread_receive()
             break;
         case CLIENT_SENDING:
             if((receivedStrLen = recvfrom(tfrc_client.sock, ackBufferR, MSGMAX, 0,
-                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != ACKMSGSIZE)
+                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) < 0)
                     printf(" Receive Error from Server at CLIENT_START !!\n");
             else
             {
 				struct ACK_t *ackPtr = (struct ACK_t*) ackBufferR;
 
 				tfrc_client.numReceived++;
-				
+			
+				printf("----msgType: %d code: %d, ackNum: %d ---\n", ackPtr->msgType, ackPtr->code, ackPtr->ackNum);
+
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
                     sem_wait(&lock);
@@ -137,7 +139,7 @@ void *thread_receive()
 						 
                     tfrc_client.t_now = get_time()*MEG;
 
-                   // tfrc_client.t_recvdata = tfrc_client.timestore[ntohl(ackPtr->seqnumrecvd)%TIMESTAMPWINDOW];
+                   // tfrc_client.t_recvdata = tfrc_client.timestore[ntohl(ackPtr->/eqnumrecvd)%TIMESTAMPWINDOW];
                     tfrc_client.t_delay = (double)ntohl(ackPtr->T_delay); //  CHECK is t_delay in microseconds
                     tfrc_client.X_recv = (double)(ntohl(ackPtr->recvRate)/1000.0);
                     tfrc_client.p = (float)ntohl(ackPtr->lossRate)/1000.0; // server sets p in int
@@ -379,10 +381,54 @@ int main(int argc, char *argv[]) {
  
 			break;
 		case CLIENT_STOP:
+			tfrc_client.sessionTime = get_time() *MEG - tfrc_client.sessionTime;
+            // send out a CLIENT_STOP packet
 
-			break;
+            usec4 = get_time()*MEG;
+
+
+            if(usec4-usec3  > tfrc_client.t_RTO)// || tfrc_client.sendSTOP == false) //  repeat the stop packet
+            {
+				struct control_t *cntrl = ackBuffer; 
+                tfrc_client.feedbackRecvd =false;
+                cntrl->code=STOP;
+                cntrl->msgType=CONTROL;
+                cntrl->seqNum = htonl(tfrc_client.sequencenum);
+
+                if (sendto(tfrc_client.sock, ackBuffer, CNTRLMSGSIZE, 0, (struct sockaddr *)
+                           &(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != CNTRLMSGSIZE)
+                    DieWithError("sendto() sent a different number of bytes than expected");
+
+
+                usec3 = get_time() *MEG;
+                
+
+                tfrc_client.sendSTOP = true;
+                
+                tfrc_client.avgThroughput = tfrc_client.numSent*tfrc_client.msgSize*8*1000000.0/tfrc_client.sessionTime;
+                tfrc_client.avgLossEvents = tfrc_client.lossEventCounter/tfrc_client.numReceived;
+                
+               // printf("\n Total time of session: %g uSec \n Total Data Sent = %g Packets (%g Bytes)\n Total Acks Received = %g \n Total Average Throughput = %g \n Average Loss Event = %g \n Total Pkt Droppped (dropped rate) = %g (%g)\n",tfrc_client.sessionTime,tfrc_client.numSent,tfrc_client.numSent*tfrc_client.msgSize*8,tfrc_client.numReceived,tfrc_client.avgThroughput,tfrc_client.avgLossEvents,tfrc_client.numDropped,tfrc_client.numDropped/tfrc_client.numSent); 
+               printf("Total time of session: %.2lf uSec\n", tfrc_client.sessionTime);
+			   printf("Total amount of data sent: %.0lf Packets (%.0lf Bytes)\n", tfrc_client.numSent, tfrc_client.numSent*tfrc_client.msgSize*8);
+			   printf("Total number of ACKs recvd: %.0lf\n", tfrc_client.numReceived);
+			   printf("Total average throughput: %.2lf\n", tfrc_client.avgThroughput);
+			   printf("Average loss event rates: %.0lf\n", tfrc_client.avgLossEvents);
+			   printf("Total Pkt Dropped (dropped rate): %.0f (%.3f)\n", tfrc_client.numDropped, tfrc_client.numDropped/tfrc_client.numSent);
+                exit(1) ; //  hard stop 
+            }
+            else if(tfrc_client.feedbackRecvd)
+            {
+                if(CNTCStop)
+                    exit(1);
+
+                break;
+            }
+
+		//	break;
 		}
 	}
+	pthread_exit(NULL);
 }
 
 
