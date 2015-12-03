@@ -328,7 +328,6 @@ int main(int argc, char *argv[]) {
 				
                     if(PACKETDROP(tfrc_client.simulatedLossRate)==1)
                     {
-
 						uint16_t sendsize = ntohs(dataPtr->msgLength);
                         if (sendto(tfrc_client.sock, dataBuffer, sendsize, 0, (struct sockaddr *)
                            &(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != sendsize){
