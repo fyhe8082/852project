@@ -71,11 +71,11 @@ void enQueue(QUEUE *pq , struct logEntry *value)
         deQueue(pq, value);
 
     pq->qBase[pq->rear]->timeArrived = value->timeArrived;
-    pq->qBase[pq->rear]->packet->msgLength = value->packet->msgLength;
+    pq->qBase[pq->rear]->packet->msgLength = ntohs(value->packet->msgLength);
     pq->qBase[pq->rear]->packet->msgType = value->packet->msgType;
     pq->qBase[pq->rear]->packet->code = value->packet->code;
     pq->qBase[pq->rear]->packet->CxID = value->packet->CxID;
-    pq->qBase[pq->rear]->packet->seqNum = value->packet->seqNum;
+    pq->qBase[pq->rear]->packet->seqNum = ntohl(value->packet->seqNum);
     pq->qBase[pq->rear]->packet->timeStamp = value->packet->timeStamp;
     pq->qBase[pq->rear]->packet->RTT = value->packet->RTT;
 /*
@@ -101,10 +101,10 @@ void deQueue(QUEUE *pq , struct logEntry *value)
         printf("Is empty!");
     }else
     {
-        value = pq->qBase[pq->front];
+        //value = pq->qBase[pq->front];
         //printf("\n %d ?? \n",*value);
         pq->front = (pq->front + 1)%MAXN ;
-
+        //free(value);
     }
 
 }
@@ -192,6 +192,7 @@ int getIndexBefore(QUEUE *pq, uint32_t S_loss)
 
         tail = (tail + 1)%MAXN ;
     }
+    return index;
 }
 
 int getIndexAfter(QUEUE *pq, uint32_t S_loss)
@@ -208,6 +209,7 @@ int getIndexAfter(QUEUE *pq, uint32_t S_loss)
 
         tail = (tail + 1)%MAXN;
     }
+    return index;
 }
 
 int getRecvBits(QUEUE *pq, uint64_t timeLine)
@@ -219,6 +221,7 @@ int getRecvBits(QUEUE *pq, uint64_t timeLine)
    {
        if (pq->qBase[tail]->timeArrived > timeLine)
            Bytes += pq->qBase[tail]->packet->msgLength;
+       tail = (tail + 1);
    } 
    return Bytes*8;
 }
