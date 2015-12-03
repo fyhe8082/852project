@@ -297,21 +297,21 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case CLIENT_SENDING:
-					usec2 = get_time() * MEG; // returns double in seconds so times MEG
+				usec2 = get_time() * MEG; // returns double in seconds so times MEG
 
-            		if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
+            	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
-                		if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
+            		if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
                 
 					//if(tfrc_client.expectedACK+9 == tfrc_client.sequencenum)
 					//continue;
-						sem_wait(&lock);
-						struct data_t *dataPtr = (struct data_t*)dataBuffer;
-						dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
-						tfrc_client.latestPktTimestamp = get_time() * MEG;
-						dataPtr->timeStamp = htond(tfrc_client.latestPktTimestamp); //  time now in usec
-						dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
-						tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
+					sem_wait(&lock);
+					struct data_t *dataPtr = (struct data_t*)dataBuffer;
+					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
+					tfrc_client.latestPktTimestamp = get_time() * MEG;
+					dataPtr->timeStamp = htond(tfrc_client.latestPktTimestamp); //  time now in usec
+					dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
+					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
                     
                     if ( tfrc_client.feedbackRecvd == true) {
 						tfrc_client.noFeedbackTimer = get_time() *MEG + tfrc_client.t_RTO; // reset the timer
@@ -329,12 +329,11 @@ int main(int argc, char *argv[]) {
 							DieWithError("sendto() sent a different number of bytes than expected.");
 
 						}
-
                     }
                     else 
                     { 
 						tfrc_client.numDropped++;
-                    }
+                    
                     
                     tfrc_client.numSent++;
                     usec1 = get_time() *MEG;
@@ -367,9 +366,7 @@ int main(int argc, char *argv[]) {
                     tfrc_client.noFeedbackTimer = get_time() * MEG + tfrc_client.t_RTO; // update the nofeedbacktimer
                     tfrc_client.feedbackRecvd = true;
                     sem_post(&lock);
-
                 }
-
             }
  
 			break;
