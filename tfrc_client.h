@@ -51,10 +51,11 @@ struct ClientPrms {
 	double X_recv;   // rate seen by receiver
 	double t_RTO;    // tcp retransmission timeout value in secs, default = 4*R
 	double tld;     //time since last doubled during slow-start
-	double t_revcdata; // timestamp contained in ACK
+	double t_recvdata; // timestamp contained in ACK
 	double t_delay;    // t_delay contained in ACK
 	double t_now;
 	float R;       // Round trip time in seconds
+	double R_sample;
 	float p;       // loss event rate
 	uint16_t b;     // max number of packets acknowledged by a single TCP ACK, default=1
 	
@@ -63,8 +64,11 @@ struct ClientPrms {
 	struct sigaction displaytimer;
 	double numDropped;
 	double latestPktTimestamp;
+	double lastAckreceived;
+	uint32_t lossEventCounter;
 
 	double numSent;
+	double numReceived;
 	uint32_t cntrlTimeout; // timeout value for control message, default = 10 sec
 	uint32_t cntrlTimeoutCounter; //count at most 10 times for control msg
 	double noFeedbackTimer; // start of no feedback interval

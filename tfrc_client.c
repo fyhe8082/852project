@@ -33,6 +33,11 @@ char startBuffer[CNTRLMSGSIZE+1];
 char dataBuffer[DATAHEADERSIZE+DATAMAX];
 char ackBuffer[ACKMSGSIZE+1];
 
+char startBufferR[CNTRLMSGSIZE+1];
+char dataBufferR[DATAHEADERSIZE+DATAMAX];
+char ackBufferR[ACKMSGSIZE+1];
+
+
 void printruntime(int ignored)
 {	
     printf("%-11.2f %-8.2f %-11.2f %-8.2f %-8.2f %-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R,tfrc_client.t_RTO,tfrc_client.p);
@@ -67,14 +72,14 @@ void *thread_receive()
         case CLIENT_START:
            // if((receivedStrLen = recvfrom(tfrc_client.sock, startBuffer, MSGMAX, 0,
                 //                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE){
- 	       if((receivedStrLen = recvfrom(tfrc_client.sock, startBuffer, MSGMAX, 0,
+			if((receivedStrLen = recvfrom(tfrc_client.sock, startBufferR, MSGMAX, 0,
                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) < 0){
 		//printf("%ld--%d\n", receivedStrLen, CNTRLMSGSIZE);                    
-		printf(" Receive Error from Server at CLIENT_START !!\n");
-	    }
+				printf(" Receive Error from Server at CLIENT_START !!\n");
+			}
             else
             {
-		struct control_t *startPtr = (struct control_t *) startBuffer;
+				struct control_t *startPtr = (struct control_t *) startBufferR;
                 // check for correctness of the received ACK.
                 printf("%d--%d\n", startPtr->msgType, startPtr->code);   
 	
@@ -104,17 +109,19 @@ void *thread_receive()
             }
             break;
         case CLIENT_SENDING:
-           /* if((receivedStrLen = recvfrom(tfrc_client.sock, ack.ackmessage, MSGMAX, 0,
+            if((receivedStrLen = recvfrom(tfrc_client.sock, ackBufferR, MSGMAX, 0,
                                           (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != ACKMSGSIZE)
                     printf(" Receive Error from Server at CLIENT_START !!\n");
             else
-            {		
+            {
+				struct ACK_t *ackPtr = (struct ACK_t*) ackBufferR;
+
 				tfrc_client.numReceived++;
 				
-                if(*ack.msgType == ACK && *ack.msgCode == OK)
+                if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
                     sem_wait(&lock);
-                    tfrc_client.lastAckreceived = ntohl(*(ack.ackNum)); // assuming receiver responds to most recent ACK
+                    tfrc_client.lastAckreceived = ntohl(ackPtr->ackNum); // assuming receiver responds to most recent ACK
                     
                     
                     if(tfrc_client.lastAckreceived >= tfrc_client.expectedACK){
@@ -130,30 +137,30 @@ void *thread_receive()
 						 
                     tfrc_client.t_now = get_time()*MEG;
 
-                    tfrc_client.t_recvdata = tfrc_client.timestore[ntohl(*(ack.seqnumrecvd))%TIMESTAMPWINDOW];
-                    tfrc_client.t_delay = (double)ntohl(*(ack.t_Delay)); //  CHECK is t_delay in microseconds
-                    tfrc_client.X_recv = (double)(ntohl(*(ack.receiveRate))/1000.0);
-                    tfrc_client.p = (float)ntohl(*(ack.lossEventRate))/1000.0; // server sets p in int
+                   // tfrc_client.t_recvdata = tfrc_client.timestore[ntohl(ackPtr->seqnumrecvd)%TIMESTAMPWINDOW];
+                    tfrc_client.t_delay = (double)ntohl(ackPtr->T_delay); //  CHECK is t_delay in microseconds
+                    tfrc_client.X_recv = (double)(ntohl(ackPtr->recvRate)/1000.0);
+                    tfrc_client.p = (float)ntohl(ackPtr->lossRate)/1000.0; // server sets p in int
                     tfrc_client.R_sample = (tfrc_client.t_now-tfrc_client.t_recvdata) ; //  CHANGES :: twice then in theory
 				
-		    tfrc_client.lossEventCounter +=tfrc_client.p;
+					tfrc_client.lossEventCounter +=tfrc_client.p;
 						
 						
-                    if(tfrc_client.R_rtt == 0.0) //  usually the case for the first feedback
-                        tfrc_client.R_rtt = tfrc_client.R_sample;
+                    if(tfrc_client.R == 0.0) //  usually the case for the first feedback
+                        tfrc_client.R= tfrc_client.R_sample;
                     else
-                        tfrc_client.R_rtt = 0.9 * tfrc_client.R_rtt + 0.1 * tfrc_client.R_sample; // averaging funtion
+                        tfrc_client.R = 0.9 * tfrc_client.R + 0.1 * tfrc_client.R_sample; // averaging funtion
  
-                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R_rtt,2*tfrc_client.s_msgSize*8.0/tfrc_client.X_trans);
+                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
 
                     newsendingrate(); //calculate new sending rate
                     
-                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R_rtt,2*tfrc_client.s_msgSize*8.0/tfrc_client.X_trans); //  recalculate
+                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans); //  recalculate
                     
-                    tfrc_client.timebetnPackets = tfrc_client.s_msgSize * 8.0 / tfrc_client.X_trans;
+                    tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
                     
                 }
-            }*/
+            }
             break;
         case CLIENT_STOP:
           /*  if((receivedStrLen = recvfrom(tfrc_client.sock, cntrl.controlmessage, MSGMAX, 0,
@@ -335,9 +342,9 @@ int main(int argc, char *argv[]) {
 						tfrc_client.numDropped++;
                     
                     
-                    tfrc_client.numSent++;
-                    usec1 = get_time() *MEG;
-                    sem_post(&lock);
+						tfrc_client.numSent++;
+						usec1 = get_time() *MEG;
+						sem_post(&lock);
 					}
 				}
 				else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false) // no feed back timer interrupts
