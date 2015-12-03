@@ -177,7 +177,6 @@ void *thread_receive()
                     
                     tfrc_client.feedbackRecvd = true; // to start packet transfer
 
-
                     CNTCStop=true;
                     pthread_exit(NULL);
 
@@ -319,7 +318,7 @@ int main(int argc, char *argv[]) {
 					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
 					tfrc_client.latestPktTimestamp = get_time() * MEG;
 					dataPtr->timeStamp = htond(tfrc_client.latestPktTimestamp); //  time now in usec
-					dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
+					dataPtr->RTT = htonl(tfrc_client.R*1000000); //  add senders RTT estimate
 					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
                     
                     if ( tfrc_client.feedbackRecvd == true) {
