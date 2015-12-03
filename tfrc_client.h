@@ -54,7 +54,7 @@ struct ClientPrms {
 	double t_revcdata; // timestamp contained in ACK
 	double t_delay;    // t_delay contained in ACK
 	double t_now;
-	double R;       // Round trip time in seconds
+	double R = 1;       // Round trip time in seconds
 	float p;       // loss event rate
 	uint16_t b;     // max number of packets acknowledged by a single TCP ACK, default=1
 	
