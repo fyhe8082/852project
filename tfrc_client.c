@@ -118,7 +118,7 @@ void *thread_receive()
 
 				tfrc_client.numReceived++;
 			
-				printf("----msgType: %d code: %d, ackNum: %d ---\n", ackPtr->msgType, ackPtr->code, ackPtr->ackNum);
+				printf("----msgType: %d code: %d, ackNum: %d ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum));
 
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
@@ -235,7 +235,7 @@ void setupDataMsg(char* buffer, uint16_t msgSize, uint32_t seqnum, uint32_t cxid
 }
 
 void setupAckMsg(char* buffer) {
-	struct ack_t *ackPtr = (struct ack_t *) buffer;
+	//struct ack_t *ackPtr = (struct ack_t *) buffer;
 }
 int main(int argc, char *argv[]) {
     printf("client start!\n");
@@ -316,6 +316,7 @@ int main(int argc, char *argv[]) {
 					sem_wait(&lock);
 					struct data_t *dataPtr = (struct data_t*)dataBuffer;
 					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
+					printf("seq: %d\n", tfrc_client.sequencenum);
 					tfrc_client.latestPktTimestamp = get_time() * MEG;
 					dataPtr->timeStamp = htond(tfrc_client.latestPktTimestamp); //  time now in usec
 					dataPtr->RTT = htonl(tfrc_client.R*1000000); //  add senders RTT estimate
@@ -387,7 +388,7 @@ int main(int argc, char *argv[]) {
 
             if(usec4-usec3  > tfrc_client.t_RTO)// || tfrc_client.sendSTOP == false) //  repeat the stop packet
             {
-				struct control_t *cntrl = ackBuffer; 
+				struct control_t *cntrl = (struct control_t*)ackBuffer; 
                 tfrc_client.feedbackRecvd =false;
                 cntrl->code=STOP;
                 cntrl->msgType=CONTROL;
