@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case CLIENT_SENDING:
-				usec2 = get_time() * MEG; // returns double in seconds so times MEG
+				usec2 = get_time() * MEG; // returns double in milliseconds so times MEG
 
             	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
@@ -318,7 +318,8 @@ int main(int argc, char *argv[]) {
 					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
 					printf("seq: %d\n", tfrc_client.sequencenum);
 					tfrc_client.latestPktTimestamp = get_time() * MEG;
-					dataPtr->timeStamp = htond(tfrc_client.latestPktTimestamp); //  time now in usec
+					dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
+					printf("timestamp: %ld ----", dataPtr->timeStamp);
 					dataPtr->RTT = htonl(tfrc_client.R*MEG); //  add senders RTT estimate
 					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
                     
