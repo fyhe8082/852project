@@ -81,7 +81,7 @@ void *thread_receive()
             {
 				struct control_t *startPtr = (struct control_t *) startBufferR;
                 // check for correctness of the received ACK.
-                printf("%d--%d\n", startPtr->msgType, startPtr->code);   
+                printf("Control ACK: %d--%d\n", startPtr->msgType, startPtr->code);   
 	
                 if(startPtr->msgType == CONTROL && startPtr->code==OK) //  server responded
                 {	
@@ -231,7 +231,7 @@ void setupDataMsg(char* buffer, uint16_t msgSize, uint32_t seqnum, uint32_t cxid
 	
 	//dataPtr->timeStamp = ;
 	//dataPtr->RTT = ? ;
-	dataPtr->X = (char *) calloc(msgSize, sizeof(char));
+	dataPtr->X = calloc(msgSize, sizeof(char));
 }
 
 void setupAckMsg(char* buffer) {
@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case CLIENT_SENDING:
-				usec2 = get_time() * MEG; // returns double in seconds so times MEG
+				usec2 = get_time() * MEG; // returns double in milliseconds so times MEG
 
             	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
@@ -318,8 +318,9 @@ int main(int argc, char *argv[]) {
 					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
 					printf("seq: %d\n", tfrc_client.sequencenum);
 					tfrc_client.latestPktTimestamp = get_time() * MEG;
-					dataPtr->timeStamp = htond(tfrc_client.latestPktTimestamp); //  time now in usec
-					dataPtr->RTT = htonl(tfrc_client.R*1000000); //  add senders RTT estimate
+					dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
+					printf("timestamp: %ld ----", dataPtr->timeStamp);
+					dataPtr->RTT = htonl(tfrc_client.R*MEG); //  add senders RTT estimate
 					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
                     
                     if ( tfrc_client.feedbackRecvd == true) {

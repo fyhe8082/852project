@@ -9,6 +9,9 @@ typedef struct client_t{
 	short int length;
 } client;
 
+
+void initializeparams();
+void newsendingrate();
 client* tcp_accept(int sock);
 char *NET_get_ip(struct sockaddr_in *addr);
 unsigned short NET_get_port(struct sockaddr_in *addr);
