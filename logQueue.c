@@ -223,5 +223,6 @@ int getRecvBits(QUEUE *pq, uint64_t timeLine)
            Bytes += pq->qBase[tail]->packet->msgLength;
        tail = (tail + 1)%MAXN;
    } 
+   //printf("bytes:%d\n",Bytes);
    return Bytes*8;
 }
