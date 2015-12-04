@@ -71,11 +71,11 @@ void enQueue(QUEUE *pq , struct logEntry *value)
         deQueue(pq, value);
 
     pq->qBase[pq->rear]->timeArrived = value->timeArrived;
-    pq->qBase[pq->rear]->packet->msgLength = ntohs(value->packet->msgLength);
+    pq->qBase[pq->rear]->packet->msgLength = value->packet->msgLength;
     pq->qBase[pq->rear]->packet->msgType = value->packet->msgType;
     pq->qBase[pq->rear]->packet->code = value->packet->code;
     pq->qBase[pq->rear]->packet->CxID = value->packet->CxID;
-    pq->qBase[pq->rear]->packet->seqNum = ntohl(value->packet->seqNum);
+    pq->qBase[pq->rear]->packet->seqNum = value->packet->seqNum;
     pq->qBase[pq->rear]->packet->timeStamp = value->packet->timeStamp;
     pq->qBase[pq->rear]->packet->RTT = value->packet->RTT;
 /*

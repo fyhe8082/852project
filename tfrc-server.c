@@ -377,7 +377,6 @@ int main(int argc, char *argv[])
         }
 
         buffer->msgLength = ntohs(buffer->msgLength);
-        buffer->seqNum = ntohl(buffer->seqNum);
         buffer->CxID = ntohl(buffer->CxID);
         buffer->seqNum = ntohl(buffer->seqNum);
         //printf("received success!!\n");
@@ -413,12 +412,12 @@ int main(int argc, char *argv[])
                                     CxID = buffer->CxID;
                                     bindMsgSize = ntohs(buffer->msgSize);
                                     printf("start packet:\n");
-                                    printf("length:%d\n", ntohs(buffer->msgLength));
+                                    printf("length:%d\n", buffer->msgLength);
                                     printf("type:%d\n", (int)buffer->msgType);
                                     printf("code:%d\n", (int)buffer->code);
-                                    printf("Cxid:%d\n", ntohl(buffer->CxID));
-                                    printf("Seq#:%d\n", ntohl(buffer->seqNum));
-                                    printf("size:%d\n\n", ntohs(buffer->msgSize));
+                                    printf("Cxid:%d\n", buffer->CxID);
+                                    printf("Seq#:%d\n", buffer->seqNum);
+                                    printf("size:%d\n\n", buffer->msgSize);
                                     sendOk(sock, &clntAddr, 
                                             buffer->seqNum,
                                             buffer->msgSize
