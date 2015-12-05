@@ -142,7 +142,7 @@ void *thread_receive()
 
                    // tfrc_client.t_recvdata = tfrc_client.timestore[ntohl(ackPtr->/eqnumrecvd)%TIMESTAMPWINDOW];
                     tfrc_client.t_delay = (double)ntohl(ackPtr->T_delay); //  CHECK is t_delay in microseconds
-                    tfrc_client.X_recv = (double)(ntohl(ackPtr->recvRate)/1000.0);
+                    tfrc_client.X_recv = (double)(ntohl(ackPtr->recvRate));
                     tfrc_client.p = (float)ntohl(ackPtr->lossRate)/1000.0; // server sets p in int
                     tfrc_client.R_sample = (tfrc_client.t_now-tfrc_client.t_recvdata-tfrc_client.t_delay) ; //  CHANGES :: twice then in theory
 				
@@ -316,79 +316,71 @@ int main(int argc, char *argv[]) {
 
             	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
-            	if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
+					if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
                 
-					//if(tfrc_client.expectedACK+9 == tfrc_client.sequencenum)
-					//continue;
-					sem_wait(&lock);
-					struct data_t *dataPtr = (struct data_t*)dataBuffer;
-					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
-				//	printf("seq: %d\n", tfrc_client.sequencenum);
+						//if(tfrc_client.expectedACK+9 == tfrc_client.sequencenum)
+						//continue;
+						sem_wait(&lock);
+						struct data_t *dataPtr = (struct data_t*)dataBuffer;
+						dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
+						//	printf("seq: %d\n", tfrc_client.sequencenum);
 				
-					tfrc_client.latestPktTimestamp = get_time(); // when the packet is sent
-					dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
+						tfrc_client.latestPktTimestamp = get_time(); // when the packet is sent
+						dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
+						
+						dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
 					
-					dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
-					
-					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohl(dataPtr->timeStamp);
+						tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohl(dataPtr->timeStamp);
 
-                    if ( tfrc_client.feedbackRecvd == true) {
-						tfrc_client.noFeedbackTimer = get_time() + tfrc_client.t_RTO; // reset the timer
-						tfrc_client.feedbackRecvd = false;
-					}
-				
-				//	printf("simulatedLossRate: %f\n", tfrc_client.simulatedLossRate);
-                    if(PACKETDROP(tfrc_client.simulatedLossRate)==1)
-                    {
-						uint16_t sendsize = ntohs(dataPtr->msgLength);
-                        if (sendto(tfrc_client.sock, dataBuffer, sendsize, 0, (struct sockaddr *)
-                           &(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != sendsize){
-							printf("failed");
-						//	printf("%s", tfrc_client.servAddr);
-							DieWithError("sendto() sent a different number of bytes than expected.");
-
+						if ( tfrc_client.feedbackRecvd == true) {
+							tfrc_client.noFeedbackTimer = get_time() + tfrc_client.t_RTO; // reset the timer
+							tfrc_client.feedbackRecvd = false;
 						}
-                    }
-                    else 
-                    { 
-						printf("drop sequence number: %d\n", tfrc_client.sequencenum);
-						tfrc_client.numDropped++;
-					}
-					tfrc_client.numSent++;
-					usec1 = get_time();
-					sem_post(&lock);
-				}
-				else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false) // no feed back timer interrupts
-                {
-					printf("no feed back timer interrupts\n");
-					sem_wait(&lock);
+				
+						//	printf("simulatedLossRate: %f\n", tfrc_client.simulatedLossRate);
+						if(PACKETDROP(tfrc_client.simulatedLossRate)==1) {
+							uint16_t sendsize = ntohs(dataPtr->msgLength);
+							if (sendto(tfrc_client.sock, dataBuffer, sendsize, 0, (struct sockaddr *)
+								&(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != sendsize){
+								printf("failed");
+							//	printf("%s", tfrc_client.servAddr);
+								DieWithError("sendto() sent a different number of bytes than expected.");
+							}
+						}
+						else { 
+							printf("drop sequence number: %d\n", tfrc_client.sequencenum);
+							tfrc_client.numDropped++;
+						}
+						tfrc_client.numSent++;
+						usec1 = get_time();
+						sem_post(&lock);
+					} else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false){ // no feed back timer interrupts
+						printf("no feed back timer interrupts\n");
+						sem_wait(&lock);
 					
-                    if(tfrc_client.R>0.0) // if there has been feedback beforehand
-                    {
-                        if(tfrc_client.X_calc>=tfrc_client.X_recv*2)
-                            tfrc_client.X_recv = fmax(tfrc_client.X_recv/2,tfrc_client.msgSize*8.0/(2*t_mbi));
-                        else
-                            tfrc_client.X_recv = tfrc_client.X_calc/4;
+			            if(tfrc_client.R != DATAMAX) // if there has been feedback beforehand
+				        {
+					        if(tfrc_client.X_calc>=tfrc_client.X_recv*2)
+						        tfrc_client.X_recv = fmax(tfrc_client.X_recv/2,tfrc_client.msgSize*8.0/(2*t_mbi));
+							else
+							    tfrc_client.X_recv = tfrc_client.X_calc/4;
 
-                        newsendingrate();
-                    }
-                    else
-                    {
-                        tfrc_client.X_trans = fmax(tfrc_client.X_trans/2,tfrc_client.msgSize*8.0/t_mbi);
-                    }
+							newsendingrate();
+						} else {
+							tfrc_client.X_trans = fmax(tfrc_client.X_trans/2,tfrc_client.msgSize*8.0/t_mbi);
+						}
                     
-                    tfrc_client.sequencenum = tfrc_client.expectedACK-1; // look for the last ack received 
+						tfrc_client.sequencenum = tfrc_client.expectedACK-1; // look for the last ack received 
 
-                    tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
+						tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
                     
-                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
-                    tfrc_client.noFeedbackTimer = get_time()
-						+ tfrc_client.t_RTO; // update the nofeedbacktimer
-                    tfrc_client.feedbackRecvd = true;
-                    sem_post(&lock);
+						tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
+						tfrc_client.noFeedbackTimer = get_time()/MEG
+							+ tfrc_client.t_RTO; // update the nofeedbacktimer
+						tfrc_client.feedbackRecvd = true;
+						sem_post(&lock);
                 }
             }
- 
 			break;
 		case CLIENT_STOP:
 			tfrc_client.sessionTime = get_time() - tfrc_client.sessionTime;
@@ -397,7 +389,7 @@ int main(int argc, char *argv[]) {
             usec4 = get_time();
 
 
-            if(usec4-usec3  > tfrc_client.t_RTO)// || tfrc_client.sendSTOP == false) //  repeat the stop packet
+            if(usec4-usec3  > tfrc_client.t_RTO*MEG)// || tfrc_client.sendSTOP == false) //  repeat the stop packet
             {
 				struct control_t *cntrl = (struct control_t*)ackBuffer; 
                 tfrc_client.feedbackRecvd =false;
