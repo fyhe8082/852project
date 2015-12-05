@@ -40,7 +40,7 @@ char ackBufferR[ACKMSGSIZE+1];
 
 void printruntime(int ignored)
 {	
-    printf("%-11.2f %-8.2f %-11.2f %-8.2f %-8.2f %-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R,tfrc_client.t_RTO,tfrc_client.p);
+    printf("%-11.2f %-8.2f %-11.2f %-8.2f %-8.2f %-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R*1.0,tfrc_client.t_RTO,tfrc_client.p);
     
     ualarm(500000,0); // reset for next 0.5 second
 }
@@ -230,7 +230,7 @@ void setupDataMsg(char* buffer, uint16_t msgSize, uint32_t seqnum, uint32_t cxid
 	dataPtr->seqNum = htonl(seqnum);  // limit the max to avoid overflow
 	
 	//dataPtr->timeStamp = ;
-	//dataPtr->RTT = ? ;
+	dataPtr->RTT = 1 ;
 	dataPtr->X = calloc(msgSize, sizeof(char));
 }
 
@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
 			}
 			break;
 		case CLIENT_SENDING:
-				usec2 = get_time() * MEG; // returns double in milliseconds so times MEG
+				usec2 = get_time(); // returns double in seconds so times MEG
 
             	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
@@ -317,10 +317,14 @@ int main(int argc, char *argv[]) {
 					struct data_t *dataPtr = (struct data_t*)dataBuffer;
 					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
 					printf("seq: %d\n", tfrc_client.sequencenum);
-					tfrc_client.latestPktTimestamp = get_time() * MEG;
+					tfrc_client.latestPktTimestamp = get_time();
+			//		printf("timestamp1: %lf ----\n", tfrc_client.latestPktTimestamp);
+				//	printf("timestamp1: %lf ----\n", get_time() * MEG );
 					dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
-					printf("timestamp: %ld ----", dataPtr->timeStamp);
-					dataPtr->RTT = htonl(tfrc_client.R*MEG); //  add senders RTT estimate
+				    printf("R: %d\n", tfrc_client.R);
+					printf("RTT: %d\n", tfrc_client.R);
+					dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
+					printf("timestamp3: %lu, RTT:%d ----\n", dataPtr->timeStamp, ntohl(dataPtr->RTT));
 					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
                     
                     if ( tfrc_client.feedbackRecvd == true) {

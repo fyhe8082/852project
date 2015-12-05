@@ -449,15 +449,17 @@ int main(int argc, char *argv[])
                 }
             case DATA :
                 {
-                    //printf("received DATA!!\n");
+                    printf("received DATA!!\n");
                     if (bindFlag == 1 
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
                     {
                         data = (struct data_t *)buffer;
                         data->RTT = ntohl(data->RTT);
-                        printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
-                        RTT = data->RTT;
+                       // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
+                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->code, ntohl(data->RTT), data->msgLength);
+                       
+						RTT = data->RTT;
                         printf("data %" PRIu32 " received\n", data->seqNum);
                         RTT = 1000000;//for test
                         preLossRate = lossRate;

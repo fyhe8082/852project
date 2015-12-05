@@ -20,6 +20,6 @@ double ntohd(double network);
 void pack_ack(char buf[], int id, int seq, double drop, double rx, int seq_recvd);
 void shift_s_values(int s[]);
 double calc_s_hat(int s[]);
-double get_time();
-
+//double get_time();
+uint64_t get_time();
 #endif
