@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <inttypes.h> // for print uint64
 #include <stdlib.h>
 #include <malloc.h>
 #include <stdbool.h>   //for bool
@@ -36,7 +37,7 @@ void initQueue(QUEUE *pq)
     {
         pq->qBase[i] = (struct logEntry *)malloc(sizeof(struct logEntry));
         pq->qBase[i]->packet = (struct data_t*)malloc(sizeof(struct data_t));
-        //pq->qBase[i]->timeArrived = (uint64_t)malloc(sizeof(uint64_t));
+        //pq->qBase[i]->timeArrived = (uint64_t*)malloc(sizeof(uint64_t));
 /*
         pq->qBase[i]->packet->msgLength = (uint16_t)malloc(sizeof(uint16_t));
         pq->qBase[i]->packet->msgType = (uint8_t)malloc(sizeof(uint8_t));
@@ -71,6 +72,8 @@ void enQueue(QUEUE *pq , struct logEntry *value)
         deQueue(pq, value);
 
     pq->qBase[pq->rear]->timeArrived = value->timeArrived;
+    printf("%" PRIu64 "\n\n",pq->qBase[pq->rear]->timeArrived);
+    printf("%" PRIu64 "\n\n",value->timeArrived);
     pq->qBase[pq->rear]->packet->msgLength = value->packet->msgLength;
     pq->qBase[pq->rear]->packet->msgType = value->packet->msgType;
     pq->qBase[pq->rear]->packet->code = value->packet->code;
