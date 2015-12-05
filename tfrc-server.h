@@ -31,7 +31,7 @@ void enQueue(QUEUE *pq , struct logEntry *value);
 bool isemptyQueue(QUEUE *pq);
 bool is_fullQueue(QUEUE *pq);
 void deQueue(QUEUE *pq , struct logEntry *value);
-uint32_t getMax3SeqNum(QUEUE *pq);
+uint32_t getMaxSeqNum(QUEUE *pq, int index);
 int existSeqNum(QUEUE *pq, uint32_t seqNum);
 int getIndexBefore(QUEUE *pq, uint32_t S_loss);
 int getIndexAfter(QUEUE *pq, uint32_t S_loss);
