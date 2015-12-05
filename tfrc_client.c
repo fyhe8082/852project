@@ -40,7 +40,7 @@ char ackBufferR[ACKMSGSIZE+1];
 
 void printruntime(int ignored)
 {	
-    printf("%-11.2f %-8.2f %-11.2f %-8.2f %-8.2f %-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R*1.0,tfrc_client.t_RTO,tfrc_client.p);
+    printf("%-11.2f %-8.2f %-11.2f %-8.2f %-8.2f %-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R/MEG,tfrc_client.t_RTO,tfrc_client.p);
     
     ualarm(500000,0); // reset for next 0.5 second
 }
@@ -85,7 +85,7 @@ void *thread_receive()
                 if(startPtr->msgType == CONTROL && startPtr->code==OK) //  server responded
                 {	
                     cStatus = CLIENT_SENDING; // state change
-                    tfrc_client.sessionTime = get_time()*MEG;
+                    tfrc_client.sessionTime = get_time();
                     
                     tfrc_client.feedbackRecvd = true; // to start packet transfer
                     
@@ -121,7 +121,9 @@ void *thread_receive()
 
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
+				//	printf("enter if --------------\n");
                     sem_wait(&lock);
+					printf("sfdggd\n");
                     tfrc_client.lastAckreceived = ntohl(ackPtr->ackNum); // assuming receiver responds to most recent ACK
                     
                     
@@ -148,12 +150,12 @@ void *thread_receive()
 						
 						
                     if(tfrc_client.R == DATAMAX) {
-						printf("First Feedback has been received!!");  
+						printf("First Feedback has been received!!\n");  
                         tfrc_client.R= tfrc_client.R_sample;
 					}//  usually the case for the first feedback
                     else {
                         tfrc_client.R = 0.9 * tfrc_client.R + 0.1 * tfrc_client.R_sample; // averaging funtion
-						printf("++++++++++++++++++++Other ack received!!");
+					//	printf("++++++++++++++++++++Other ack received!!\n");
 					}
  
                     tfrc_client.t_RTO = fmax(4 * tfrc_client.R/MEG,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
@@ -350,12 +352,10 @@ int main(int argc, char *argv[]) {
                     else 
                     { 
 						tfrc_client.numDropped++;
-                    
-                    
-						tfrc_client.numSent++;
-						usec1 = get_time() *MEG;
-						sem_post(&lock);
 					}
+					tfrc_client.numSent++;
+					usec1 = get_time();
+					sem_post(&lock);
 				}
 				else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false) // no feed back timer interrupts
                 {
@@ -381,7 +381,8 @@ int main(int argc, char *argv[]) {
                     tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
                     
                     tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
-                    tfrc_client.noFeedbackTimer = get_time() * MEG + tfrc_client.t_RTO; // update the nofeedbacktimer
+                    tfrc_client.noFeedbackTimer = get_time()
+						+ tfrc_client.t_RTO; // update the nofeedbacktimer
                     tfrc_client.feedbackRecvd = true;
                     sem_post(&lock);
                 }
@@ -389,10 +390,10 @@ int main(int argc, char *argv[]) {
  
 			break;
 		case CLIENT_STOP:
-			tfrc_client.sessionTime = get_time() *MEG - tfrc_client.sessionTime;
+			tfrc_client.sessionTime = get_time() - tfrc_client.sessionTime;
             // send out a CLIENT_STOP packet
 
-            usec4 = get_time()*MEG;
+            usec4 = get_time();
 
 
             if(usec4-usec3  > tfrc_client.t_RTO)// || tfrc_client.sendSTOP == false) //  repeat the stop packet
@@ -408,7 +409,7 @@ int main(int argc, char *argv[]) {
                     DieWithError("sendto() sent a different number of bytes than expected");
 
 
-                usec3 = get_time() *MEG;
+                usec3 = get_time();
                 
 
                 tfrc_client.sendSTOP = true;
