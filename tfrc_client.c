@@ -153,6 +153,7 @@ void *thread_receive()
 					}//  usually the case for the first feedback
                     else {
                         tfrc_client.R = 0.9 * tfrc_client.R + 0.1 * tfrc_client.R_sample; // averaging funtion
+						printf("++++++++++++++++++++Other ack received!!");
 					}
  
                     tfrc_client.t_RTO = fmax(4 * tfrc_client.R/MEG,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
