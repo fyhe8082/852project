@@ -29,6 +29,7 @@ static struct ACK_t *dataAck = NULL;
 int sock;                    /* Socket */
 struct sockaddr_in clntAddr; /* Client address */
 static uint32_t CxID;
+uint64_t array[9];
 static uint32_t lossRate = 0;
 static uint32_t preLossRate = 0;
 int bindFlag = 0;            /* server bind with any client or not*/
@@ -44,7 +45,7 @@ static uint32_t seqMax = 0;
 static uint32_t seqMin = 0;
 
 /*the newest RTT*/
-static uint32_t RTT;
+static uint32_t RTT=0;
 /*the struct for store the receive history*/
 QUEUE *mylog;
 struct logEntry *entry;
@@ -214,7 +215,7 @@ float getWeight(int i, int I_num)
     if(i < I_num/2)
         w_i = 1;
     else
-        w_i = 1-(i-(I_num/2-1))/(I_num/2+1);
+        w_i = 1-(i-((float)I_num/2-1))/((float)I_num/2+1);
 
     return w_i;
 }
@@ -246,19 +247,21 @@ void compute()
 
     /*contruct the array to store the Interval of loss event, the order is the reveal as the RFC 3448 description*/
 
-    uint64_t *array;
-    array = (uint64_t *)malloc(I_count*sizeof(uint64_t));
     int i = 0;
-    uint64_t preTime = 0;
     p = lossRecord;
+    uint64_t preTime = lossRecord->timeArrived;
 
     while(p != NULL)
     {
         if (p->isNewLoss == true)
         {
-            if (preTime != 0)
+            if (I_count>=8)
             {
-                array[i] = p->timeArrived - preTime;
+                i++;
+                if (i>=I_count-8)
+                    array[I_count-i] = p->timeArrived - preTime;
+            }else{
+                array[I_count-i] = p->timeArrived - preTime;
                 i++;
             }
             preTime = p->timeArrived;
@@ -267,25 +270,30 @@ void compute()
     }
 
     gettimeofday(&tv, NULL);
-    array[i] = (1000000 * tv.tv_sec + tv.tv_usec) - preTime;
+    array[0] = (1000000 * tv.tv_sec + tv.tv_usec) - preTime;
 
     /*compute the loss event rate*/
-    int n = I_count -1;
-    uint64_t I_tot0 = 0;
-    uint64_t I_tot1 = 0;
-    uint64_t I_tot = 0;
-    float I_mean = 0;
-    float W_tot = 0;
-    for (i=n;i>0;i--)
+    int n;
+    if (I_count > 8)
+        n = 8;
+    else
+        n = I_count;
+    double I_tot0 = 0;
+    double I_tot1 = 0;
+    double I_tot = 0;
+    double I_mean = 0;
+    double W_tot = 0;
+    for (i=0;i<n;i++)
     {
-        I_tot0 = I_tot0 + (array[n-i]*getWeight(i-1,n+1));
-        W_tot = W_tot + getWeight(i,n+1);
+        I_tot0 = I_tot0 + ((double)array[i]*getWeight(i,n)/1000000);
+        W_tot = W_tot + getWeight(i,n);
     }
-    for (i=n-1;i>=0;i--)
-        I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n+1));
+    for (i=1;i<=n;i++)
+        I_tot1 = I_tot1 + ((double)array[i]*getWeight(i-1,n)/1000000);
     I_tot = max(I_tot0, I_tot1);
+    I_tot = I_tot0;
     I_mean = I_tot/W_tot;
-    printf("I_mean %f W_tot %f I_tot %lu I_count %d", I_mean, W_tot, I_tot, I_count);
+    printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
     lossRate = (uint32_t)((1/I_mean)*1000);
 }
 
@@ -405,7 +413,6 @@ int main(int argc, char *argv[])
                                 printf("\nreceived START!!\n\n");
                                 if (bindFlag == 0)
                                 {
-                                    alarm(1);
                                     bindFlag = 1;
                                     //init the record var
                                     countRecv = 1;
@@ -465,15 +472,17 @@ int main(int argc, char *argv[])
                        // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
                         printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->seqNum, data->RTT, data->msgLength);
                        
+                        if (RTT == 0)
+                            alarm((double)data->RTT/1000000);
 						RTT = data->RTT;
                         //printf("data %" PRIu32 " received\n", data->seqNum);
-                        RTT = 1000000;//for test
+                        //RTT = 1000000;//for test
                         preLossRate = lossRate;
                         enQueueAndCheck(data);
                         if(lossRate > preLossRate)
                         {
                             sendDataAck(sock, &clntAddr);
-                            alarm(RTT/1000000);
+                            alarm((double)RTT/1000000);
                         }
                         //send each receive
                         //else sendDataAck(sock, &clntAddr);
@@ -494,7 +503,7 @@ void display()
 {
     printf("\nAmount of data received: %d packets and %d bytes\n", countRecv,countRecvBytes);
     printf("Number of ACKs sent: %d packets\n", countAck);
-    printf("The total packet loss rate: %.3f\n",countDroped/(seqMax-seqMin+1));
+    printf("The total packet loss rate: %.3f\n",(double)((seqMax-seqMin+1)-countRecv)/(seqMax-seqMin+1));
     printf("The total packet : %d\n",(seqMax-seqMin+1));
     printf("The total packet loss : %lf\n",countDroped);
     printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/1000/countAck);
@@ -513,6 +522,6 @@ void handle_alarm(int ignored)
     if(bindFlag == 0)
         return;
     sendDataAck(sock, &clntAddr);
-    alarm(RTT/1000000);
+    alarm((double)RTT/1000000);
     return;
 }
