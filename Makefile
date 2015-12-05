@@ -2,14 +2,14 @@
 all: tfrc-client tfrc-server
 
 tfrc-server: tfrc-server.o logQueue.o lossLList.o tfrc.o
-	gcc -Wall tfrc-server.o tfrc.o logQueue.o lossLList.o -o tfrc-server -lm
+	gcc -ggdb -Wall tfrc-server.o tfrc.o logQueue.o lossLList.o -o tfrc-server -lm
 
 tfrc-server.o: tfrc-server.c
-	gcc -Wall -o tfrc-server.o -c tfrc-server.c
+	gcc -ggdb -Wall -o tfrc-server.o -c tfrc-server.c
 logQueue.o: logQueue.c
-	gcc -Wall -o logQueue.o -c logQueue.c
+	gcc -ggdb -Wall -o logQueue.o -c logQueue.c
 lossLList.o: lossLList.c
-	gcc -Wall -o lossLList.o -c lossLList.c
+	gcc -ggdb -Wall -o lossLList.o -c lossLList.c
 tfrc-client: tfrc-client.o tfrc.o clientresources.o
 	gcc -ggdb -Wall -o tfrc-client tfrc-client.o tfrc.o clientresources.o -lpthread -lm
 
