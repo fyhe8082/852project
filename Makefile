@@ -11,16 +11,16 @@ logQueue.o: logQueue.c
 lossLList.o: lossLList.c
 	gcc -Wall -o lossLList.o -c lossLList.c
 tfrc-client: tfrc-client.o tfrc.o clientresources.o
-	gcc -Wall -o tfrc-client tfrc-client.o tfrc.o clientresources.o -lpthread -lm
+	gcc -ggdb -Wall -o tfrc-client tfrc-client.o tfrc.o clientresources.o -lpthread -lm
 
 tfrc-client.o: tfrc_client.c 
-	gcc -Wall -o tfrc-client.o -c tfrc_client.c -lpthread -lm
+	gcc -ggdb -Wall -o tfrc-client.o -c tfrc_client.c -lpthread -lm
 
 clientresources.o: clientresources.c
-	gcc -Wall -o clientresources.o -c clientresources.c -lm
+	gcc -ggdb -Wall -o clientresources.o -c clientresources.c -lm
 
 tfrc.o: tfrc.c
-	gcc -Wall -o tfrc.o -c tfrc.c -lm
+	gcc -ggdb -Wall -o tfrc.o -c tfrc.c -lm
 
 clean:
 	rm -f *.o *~ tfrc-server tfrc-client core

@@ -15,7 +15,7 @@
 #define MAXSEQ 10000
 #define DATAMAX 1500
 #define MAXINITTRY 10
-#define MEG 1000000.0
+#define MEG 1000000
 #define TIMESTAMPWINDOW 10
 #define t_mbi 64.0 // t_mbi  = 64 seconds in usec
 
@@ -54,7 +54,7 @@ struct ClientPrms {
 	double t_recvdata; // timestamp contained in ACK
 	double t_delay;    // t_delay contained in ACK
 	double t_now;
-	float R;       // Round trip time in seconds
+	uint32_t R;       // Round trip time in seconds
 	double R_sample;
 	float p;       // loss event rate
 	uint16_t b;     // max number of packets acknowledged by a single TCP ACK, default=1
@@ -63,7 +63,7 @@ struct ClientPrms {
 	double sessionTime;
 	struct sigaction displaytimer;
 	double numDropped;
-	double latestPktTimestamp;
+	uint64_t latestPktTimestamp;
 	double lastAckreceived;
 	uint32_t lossEventCounter;
 	double avgLossEvent;

@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
         cliAddrLen = sizeof(clntAddr);
         //printf(" success!!\n");
         /* Block until receive message from a client */
-        if ((recvMsgSize = recvfrom(sock, buffer, sizeof(struct control_t), 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
+        if ((recvMsgSize = recvfrom(sock, buffer, MAX_BUFFER, 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
         {
             printf("Failure on recvfrom, client: %s, errno:%d\n", inet_ntoa(clntAddr.sin_addr), errno);
             continue;
@@ -382,6 +382,7 @@ int main(int argc, char *argv[])
         countRecvBytes += recvMsgSize;
         if((*(uint32_t*)(buffer+8)) > seqMax)
             seqMax = *(uint32_t*)(buffer+8);
+        
 
         /* Parsing the packet */
         msgType = *(uint8_t*)(buffer+2);
@@ -452,7 +453,7 @@ int main(int argc, char *argv[])
                 }
             case DATA :
                 {
-                    //printf("received DATA!!\n");
+                    printf("received DATA!!\n");
                     if (bindFlag == 1 
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
@@ -462,19 +463,19 @@ int main(int argc, char *argv[])
                         data->CxID = ntohl(data->CxID);
                         data->seqNum = ntohl(data->seqNum);
                         data->RTT = ntohl(data->RTT);
-                        printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
-                        RTT = data->RTT;
-                        printf("data %" PRIu32 " received\n", data->seqNum);
-                        RTT = 1000000;//for test
+						RTT = data->RTT;
+    printf("RTT %u \n",data->RTT);
+                        //RTT = 1000000;//for test
                         preLossRate = lossRate;
                         enQueueAndCheck(data);
+                        //send each receive
+                        //else sendDataAck(sock, &clntAddr);
                         if(lossRate > preLossRate)
                         {
+    printf("xxxxxx\n");
                             sendDataAck(sock, &clntAddr);
                             alarm(RTT/1000000);
                         }
-                        //send each receive
-                        //else sendDataAck(sock, &clntAddr);
                     }
 
                     break;

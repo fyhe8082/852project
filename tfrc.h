@@ -63,8 +63,8 @@ struct data_t {
     uint8_t code;      /* Code */
     uint32_t CxID;      /* connection ID */
     uint32_t seqNum;    /* Sequence Number */
-    uint64_t timeStamp; /* TimeStamp */
     uint32_t RTT;       /* Sender's RTT Estimate (in microsecond) */
+    uint64_t timeStamp; /* TimeStamp */
     uint8_t*  X;      /* Holds Msg Data */
 };
 
