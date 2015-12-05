@@ -22,7 +22,8 @@
 #include "tfrc.h"
 #include "tfrc-server.h"
 
-static struct control_t *buffer = NULL;
+static char buffer[MAX_BUFFER];
+static struct control_t *control = NULL;
 static struct control_t *ok = NULL;
 static struct data_t *data = NULL;
 static struct ACK_t *dataAck = NULL;
@@ -354,7 +355,7 @@ int main(int argc, char *argv[])
     servAddr.sin_port = htons(servPort);        /* Local port */
 
     /* create buffer to store packets. 1600 maximum of packet size */
-    buffer = (struct control_t*)calloc((size_t)MAX_BUFFER, 1);
+    control = (struct control_t*)calloc((size_t)MAX_BUFFER, 1);
     ok = (struct control_t*)calloc((size_t)MAX_BUFFER, 1);
     dataAck = (struct ACK_t*)calloc((size_t)MAX_BUFFER, 1);
 
@@ -377,21 +378,23 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        buffer->msgLength = ntohs(buffer->msgLength);
-        buffer->CxID = ntohl(buffer->CxID);
-        buffer->seqNum = ntohl(buffer->seqNum);
         countRecv++;
         countRecvBytes += recvMsgSize;
-        if(buffer->seqNum > seqMax)
-            seqMax = buffer->seqNum;
+        if((*(uint32_t*)(buffer+8)) > seqMax)
+            seqMax = *(uint32_t*)(buffer+8);
 
         /* Parsing the packet */
-        msgType = buffer -> msgType;
-        code = buffer -> code;
+        msgType = *(uint8_t*)(buffer+2);
+        code = *(uint8_t*)(buffer+3);
         switch (msgType) 
         {
             case CONTROL : 
                 {
+                    control = (struct control_t *)buffer;
+                    control->msgLength = ntohs(control->msgLength);
+                    control->CxID = ntohl(control->CxID);
+                    control->seqNum = ntohl(control->seqNum);
+
                     switch (code)
                     {
                         case START :
@@ -404,23 +407,23 @@ int main(int argc, char *argv[])
                                     //init the record var
                                     countRecv = 1;
                                     countRecvBytes = recvMsgSize;
-                                    seqMax = buffer->seqNum;
-                                    seqMin = buffer->seqNum;
+                                    seqMax = control->seqNum;
+                                    seqMin = control->seqNum;
 
                                     bindPort = clntAddr.sin_port;
                                     bindIP = clntAddr.sin_addr.s_addr;
-                                    CxID = buffer->CxID;
-                                    bindMsgSize = ntohs(buffer->msgSize);
+                                    CxID = control->CxID;
+                                    bindMsgSize = ntohs(control->msgSize);
                                     printf("start packet:\n");
-                                    printf("length:%d\n", buffer->msgLength);
-                                    printf("type:%d\n", (int)buffer->msgType);
-                                    printf("code:%d\n", (int)buffer->code);
-                                    printf("Cxid:%d\n", buffer->CxID);
-                                    printf("Seq#:%d\n", buffer->seqNum);
-                                    printf("size:%d\n\n", buffer->msgSize);
+                                    printf("length:%d\n", control->msgLength);
+                                    printf("type:%d\n", (int)control->msgType);
+                                    printf("code:%d\n", (int)control->code);
+                                    printf("Cxid:%d\n", control->CxID);
+                                    printf("Seq#:%d\n", control->seqNum);
+                                    printf("size:%d\n\n", control->msgSize);
                                     sendOk(sock, &clntAddr, 
-                                            buffer->seqNum,
-                                            buffer->msgSize
+                                            control->seqNum,
+                                            control->msgSize
                                           );
                                 }
                                 break;
@@ -433,8 +436,8 @@ int main(int argc, char *argv[])
                                 {
                                     printf("\nSTOP msg received!\n\n");
                                     sendOk(sock, &clntAddr, 
-                                            buffer->seqNum,
-                                            buffer->msgSize
+                                            control->seqNum,
+                                            control->msgSize
                                           );
                                     //display the output information
                                     display();
@@ -455,6 +458,9 @@ int main(int argc, char *argv[])
                             && bindPort == clntAddr.sin_port)
                     {
                         data = (struct data_t *)buffer;
+                        data->msgLength = ntohs(data->msgLength);
+                        data->CxID = ntohl(data->CxID);
+                        data->seqNum = ntohl(data->seqNum);
                         data->RTT = ntohl(data->RTT);
                         printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
                         RTT = data->RTT;
