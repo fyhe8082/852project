@@ -13,9 +13,9 @@
 #define ACKMSGSIZE 36
 #define DATAHEADERSIZE 24
 #define MAXSEQ 10000
-#define DATAMAX 1500
+#define DATAMAX 1448 //MSS = MTU-IP Header-UDP Header-TFRC Header = 1500-20-8-24=1448
 #define MAXINITTRY 10
-#define MEG 1000000
+#define MEG 1000000.0
 #define TIMESTAMPWINDOW 10
 #define t_mbi 64.0 // t_mbi  = 64 seconds in usec
 

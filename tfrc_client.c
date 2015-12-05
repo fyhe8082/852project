@@ -74,7 +74,6 @@ void *thread_receive()
                 //                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE){
 			if((receivedStrLen = recvfrom(tfrc_client.sock, startBufferR, MSGMAX, 0,
                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) < 0){
-		//printf("%ld--%d\n", receivedStrLen, CNTRLMSGSIZE);                    
 				printf(" Receive Error from Server at CLIENT_START !!\n");
 			}
             else
@@ -118,7 +117,7 @@ void *thread_receive()
 
 				tfrc_client.numReceived++;
 			
-				printf("----msgType: %d code: %d, ackNum: %d ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum));
+				printf("----msgType: %d code: %d, ackNum: %d, timestamp: %lu ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum), ackPtr->timeStamp);
 
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
@@ -126,7 +125,7 @@ void *thread_receive()
                     tfrc_client.lastAckreceived = ntohl(ackPtr->ackNum); // assuming receiver responds to most recent ACK
                     
                     
-                    if(tfrc_client.lastAckreceived >= tfrc_client.expectedACK){
+                    if(tfrc_client.lastAckreceived >= tfrc_client.expectedACK){// delayed ack !!! so a new expectedACK
 						tfrc_client.feedbackRecvd = true; 
 						tfrc_client.expectedACK=tfrc_client.lastAckreceived+1;
 						
@@ -137,28 +136,33 @@ void *thread_receive()
 					}
                     sem_post(&lock);
 						 
-                    tfrc_client.t_now = get_time()*MEG;
+                    tfrc_client.t_now = get_time();
 
                    // tfrc_client.t_recvdata = tfrc_client.timestore[ntohl(ackPtr->/eqnumrecvd)%TIMESTAMPWINDOW];
                     tfrc_client.t_delay = (double)ntohl(ackPtr->T_delay); //  CHECK is t_delay in microseconds
                     tfrc_client.X_recv = (double)(ntohl(ackPtr->recvRate)/1000.0);
                     tfrc_client.p = (float)ntohl(ackPtr->lossRate)/1000.0; // server sets p in int
-                    tfrc_client.R_sample = (tfrc_client.t_now-tfrc_client.t_recvdata) ; //  CHANGES :: twice then in theory
+                    tfrc_client.R_sample = (tfrc_client.t_now-tfrc_client.t_recvdata-tfrc_client.t_delay) ; //  CHANGES :: twice then in theory
 				
 					tfrc_client.lossEventCounter +=tfrc_client.p;
 						
 						
-                    if(tfrc_client.R == 0.0) //  usually the case for the first feedback
+                    if(tfrc_client.R == DATAMAX) {
+						printf("First Feedback has been received!!");  
                         tfrc_client.R= tfrc_client.R_sample;
-                    else
+					}//  usually the case for the first feedback
+                    else {
                         tfrc_client.R = 0.9 * tfrc_client.R + 0.1 * tfrc_client.R_sample; // averaging funtion
+					}
  
-                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
+                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R/MEG,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
 
                     newsendingrate(); //calculate new sending rate
                     
-                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans); //  recalculate
-                    
+                   // tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans); //  recalculate
+                   
+					tfrc_client.noFeedbackTimer = fmax(4 * tfrc_client.R/MEG,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans); // reset the timer
+
                     tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
                     
                 }
@@ -230,7 +234,7 @@ void setupDataMsg(char* buffer, uint16_t msgSize, uint32_t seqnum, uint32_t cxid
 	dataPtr->seqNum = htonl(seqnum);  // limit the max to avoid overflow
 	
 	//dataPtr->timeStamp = ;
-	dataPtr->RTT = 1 ;
+//	dataPtr->RTT ; //define in initialization
 	dataPtr->X = calloc(msgSize, sizeof(char));
 }
 
@@ -317,21 +321,20 @@ int main(int argc, char *argv[]) {
 					struct data_t *dataPtr = (struct data_t*)dataBuffer;
 					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
 					printf("seq: %d\n", tfrc_client.sequencenum);
-					tfrc_client.latestPktTimestamp = get_time();
-			//		printf("timestamp1: %lf ----\n", tfrc_client.latestPktTimestamp);
-				//	printf("timestamp1: %lf ----\n", get_time() * MEG );
+				
+					tfrc_client.latestPktTimestamp = get_time(); // when the packet is sent
 					dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
-				    printf("R: %d\n", tfrc_client.R);
-					printf("RTT: %d\n", tfrc_client.R);
+					
 					dataPtr->RTT = htonl(tfrc_client.R); //  add senders RTT estimate
-					printf("timestamp3: %lu, RTT:%d ----\n", dataPtr->timeStamp, ntohl(dataPtr->RTT));
-					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohd(dataPtr->timeStamp);
-                    
+					
+					tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohl(dataPtr->timeStamp);
+
                     if ( tfrc_client.feedbackRecvd == true) {
-						tfrc_client.noFeedbackTimer = get_time() *MEG + tfrc_client.t_RTO; // reset the timer
+						tfrc_client.noFeedbackTimer = get_time() + tfrc_client.t_RTO; // reset the timer
 						tfrc_client.feedbackRecvd = false;
 					}
 				
+
                     if(PACKETDROP(tfrc_client.simulatedLossRate)==1)
                     {
 						uint16_t sendsize = ntohs(dataPtr->msgLength);
