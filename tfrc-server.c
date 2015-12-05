@@ -106,8 +106,8 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->ackNum = htonl(lossRecord->seqNum>0?lossRecord->seqNum + 1:data->seqNum+1); 
     gettimeofday(&tv, NULL);
     dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
-    dataAck->T_delay = htonl(data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp);
-    dataAck->lossRate = htonl(lossRate*1000);
+    dataAck->T_delay = htonl(dataAck->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp);
+    dataAck->lossRate = htonl(lossRate);
     //multi 1000 then take the floor for recvRate
     if (RTT == 0){
         printf("\nRTT equals 0. exited\n");
@@ -122,7 +122,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
         DieWithError("sendto() sent a different number of bytes than expected");
     }
     countAck++;
-    accuLossrate += dataAck->recvRate;
+    accuLossrate += dataAck->lossRate;
 }
 
 void enQueueAndCheck(struct data_t *data)
@@ -494,9 +494,9 @@ void display()
     printf("\nAmount of data received: %d packets and %d bytes\n", countRecv,countRecvBytes);
     printf("Number of ACKs sent: %d packets\n", countAck);
     printf("The total packet loss rate: %.3f\n",countDroped/(seqMax-seqMin+1));
+    printf("The total packet : %d\n",(seqMax-seqMin+1));
     printf("The total packet loss : %lf\n",countDroped);
     printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/1000/countAck);
-    printf("%lf\n",accuLossrate);
 }
 
 void sigHandler(int sig)
