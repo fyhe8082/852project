@@ -166,7 +166,7 @@ uint32_t getMax3SeqNum(QUEUE *pq)
 int existSeqNum(QUEUE *pq, uint32_t seqNum)
 {
     if(isemptyQueue(pq))
-        return -1;
+        return -2;
 
     int tail = pq->front;
     while(tail != pq->rear)
