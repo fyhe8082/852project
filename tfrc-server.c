@@ -107,7 +107,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->ackNum = htonl(lossRecord->seqNum>0?lossRecord->seqNum + 1:data->seqNum+1); 
     gettimeofday(&tv, NULL);
     dataAck->timeStamp = mylog->qBase[mylog->rear-1]->timeArrived;
-    dataAck->T_delay = htonl(1000000 * tv.tv_sec + tv.tv_usec - mylog->qBase[mylog->rear]->timeArrived);
+    dataAck->T_delay = htonl(1000000 * tv.tv_sec + tv.tv_usec - mylog->qBase[mylog->rear-1]->timeArrived);
     dataAck->lossRate = htonl(lossRate);
     //multi 1000 then take the floor for recvRate
     if (RTT == 0){
@@ -157,7 +157,7 @@ void updateLoss ()
     uint64_t T_loss;
 
     //if (higher==3)        add to lossRecord;
-    if (mylog->rear-3 <= mylog->front)
+    if (mylog->rear-1-3 <= mylog->front)
         return;
 
     /*get the third biggest seqNum*/
