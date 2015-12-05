@@ -55,8 +55,8 @@ int remove_by_seqNum(node_t ** head, int seqNum) {
     }
     temp_node = current->next;
     //if the deleted one is loss start, charge the next one to be loss start
-    if (temp_node->isNewLoss==1)
-        temp_node->next->isNewLoss = 1;
+    //if (temp_node->isNewLoss==1)
+    //    temp_node->next->isNewLoss = 1;
 
     retval = temp_node->seqNum;
     current->next = temp_node->next;
