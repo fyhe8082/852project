@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
                     }
                     else 
                     { 
-						printf("drop sequence number: %d", tfrc_client.sequencenum);
+						printf("drop sequence number: %d\n", tfrc_client.sequencenum);
 						tfrc_client.numDropped++;
 					}
 					tfrc_client.numSent++;
