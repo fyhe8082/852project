@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
         cliAddrLen = sizeof(clntAddr);
         //printf(" success!!\n");
         /* Block until receive message from a client */
-        if ((recvMsgSize = recvfrom(sock, buffer, sizeof(struct control_t), 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
+        if ((recvMsgSize = recvfrom(sock, buffer, MAX_BUFFER, 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
         {
             printf("Failure on recvfrom, client: %s, errno:%d\n", inet_ntoa(clntAddr.sin_addr), errno);
             continue;
@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
                         data = (struct data_t *)buffer;
                         data->RTT = ntohl(data->RTT);
                        // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
-                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->code, ntohl(data->RTT), data->msgLength);
+                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->code, data->RTT, data->msgLength);
                        
 						RTT = data->RTT;
                         printf("data %" PRIu32 " received\n", data->seqNum);

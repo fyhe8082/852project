@@ -35,7 +35,7 @@ void initializeparams() {
 	tfrc_client.t_RTO = 2; // 2 secs 
 	tfrc_client.b = 1;  // one ACK per packet
 	tfrc_client.t_now = get_time();
-	tfrc_client.R = 1000;
+	tfrc_client.R = DATAMAX; //Initial RTT: MSS
 
 }
 
@@ -45,7 +45,8 @@ void newsendingrate()
     
     if(tfrc_client.p>0)
 	{
-		fq = tfrc_client.R*sqrt(2*tfrc_client.b*tfrc_client.p/3) + (tfrc_client.t_RTO*3*sqrt(3*tfrc_client.b*tfrc_client.p/8)*tfrc_client.p*(1+32*tfrc_client.p*tfrc_client.p));	
+		fq = (tfrc_client.R/MEG)*sqrt(2*tfrc_client.b*tfrc_client.p/3) + 
+			(tfrc_client.t_RTO*(3*sqrt(3*tfrc_client.b*tfrc_client.p/8)*tfrc_client.p*(1+32*tfrc_client.p*tfrc_client.p)));	
 			
         tfrc_client.X_calc = tfrc_client.msgSize *8.0 * MEG / fq; // X_calc should be in [ bps]
         tfrc_client.X_trans = fmax(fmin(fmin(tfrc_client.X_calc,2*tfrc_client.X_recv),tfrc_client.maxAllowedThroughput),tfrc_client.msgSize*8.0/t_mbi);
@@ -53,7 +54,7 @@ void newsendingrate()
     else
         if(tfrc_client.t_now-tfrc_client.tld >= tfrc_client.R)
         {
-            tfrc_client.X_trans = fmax(fmin(fmin(2*tfrc_client.X_trans,2*tfrc_client.X_recv),tfrc_client.maxAllowedThroughput),tfrc_client.msgSize*8.0/tfrc_client.R);
+            tfrc_client.X_trans = fmax(fmin(fmin(2*tfrc_client.X_trans,2*tfrc_client.X_recv),tfrc_client.maxAllowedThroughput),tfrc_client.msgSize*8.0/tfrc_client.R/MEG);
             tfrc_client.tld = tfrc_client.t_now;
         }
 }
