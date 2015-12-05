@@ -373,6 +373,7 @@ int main(int argc, char *argv[]) {
                     }
                     else
                     {
+						printf("drop sequence number: %d", tfrc_client.sequencenum);
                         tfrc_client.X_trans = fmax(tfrc_client.X_trans/2,tfrc_client.msgSize*8.0/t_mbi);
                     }
                     
