@@ -323,7 +323,7 @@ int main(int argc, char *argv[]) {
 		case CLIENT_SENDING:
 				usec2 = get_time(); // returns double in seconds so times MEG
 
-            //	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
+            	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
 					if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
                 
@@ -389,7 +389,7 @@ int main(int argc, char *argv[]) {
 						tfrc_client.feedbackRecvd = true;
 						sem_post(&lock);
                 }
-         //   }
+           }
 			break;
 		case CLIENT_STOP:
 			printf("Sending stop message to server ...\n");
