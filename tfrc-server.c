@@ -162,7 +162,7 @@ void updateLoss ()
     int index;
 
     /*add all packets(not received) that have exactly 3 higher packet seqNum*/
-    for (i=num;i<mylog->qBase[mylog->rear]->packet->seqNum;i--)
+    for (i=num;i>mylog->qBase[mylog->rear]->packet->seqNum;i--)
     {
         index = existSeqNum(mylog, i-1);
         if (index == -1)
@@ -170,6 +170,7 @@ void updateLoss ()
             T_loss = T_lossCompute(i-1);
             append(&lossRecord, i-1, T_loss);
             countDroped++;
+            printf("\n%dlost\n\n", i-1);
         }
         else
             break;
@@ -280,7 +281,7 @@ void compute()
         I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n));
     I_tot = max(I_tot0, I_tot1);
     I_mean = I_tot/W_tot;
-    lossRate = (uint32_t)(1/I_mean)*1000;
+    lossRate = (uint32_t)((1/(float)I_mean)*1000);
 }
 
 uint64_t max(uint64_t i1, uint64_t i2)
