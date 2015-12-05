@@ -172,14 +172,15 @@ void *thread_receive()
             }
             break;
         case CLIENT_STOP:
-          /*  if((receivedStrLen = recvfrom(tfrc_client.sock, cntrl.controlmessage, MSGMAX, 0,
+            if((receivedStrLen = recvfrom(tfrc_client.sock, ackBufferR, MSGMAX, 0,
                                           (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE)
                     printf(" Receive Error from Server from CLIENT_STOP !!\n");
 
             else
             {
+				struct ACK_t* ackPtr = (struct ACK_t *)ackBufferR;
                 // check for correctness of the received ACK.
-                if(*cntrl.msgType == CONTROL && *cntrl.msgCode==OK) //  server responded
+                if(ackPtr->msgType == CONTROL && ackPtr->code==OK) //  server responded
                 {
                     
                     tfrc_client.feedbackRecvd = true; // to start packet transfer
@@ -192,7 +193,6 @@ void *thread_receive()
 
                 }
             }
-	*/
 		break;
         }
     }
@@ -259,8 +259,8 @@ int main(int argc, char *argv[]) {
 	tfrc_client.servPort = atoi(argv[2]);
 	tfrc_client.msgSize = atoi(argv[3]);
 	tfrc_client.connectionID = atoi(argv[4]);
-	tfrc_client.simulatedLossRate = atoi(argv[5]);
-	tfrc_client.maxAllowedThroughput = atoi(argv[6]);
+	tfrc_client.simulatedLossRate = atof(argv[5]);
+	tfrc_client.maxAllowedThroughput = atol(argv[6]);
 
 	//Sender Initialize Parameters
 	initializeparams();
@@ -323,7 +323,7 @@ int main(int argc, char *argv[]) {
 					sem_wait(&lock);
 					struct data_t *dataPtr = (struct data_t*)dataBuffer;
 					dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
-					printf("seq: %d\n", tfrc_client.sequencenum);
+				//	printf("seq: %d\n", tfrc_client.sequencenum);
 				
 					tfrc_client.latestPktTimestamp = get_time(); // when the packet is sent
 					dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
@@ -337,7 +337,7 @@ int main(int argc, char *argv[]) {
 						tfrc_client.feedbackRecvd = false;
 					}
 				
-
+				//	printf("simulatedLossRate: %f\n", tfrc_client.simulatedLossRate);
                     if(PACKETDROP(tfrc_client.simulatedLossRate)==1)
                     {
 						uint16_t sendsize = ntohs(dataPtr->msgLength);
