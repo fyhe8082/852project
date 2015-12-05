@@ -103,7 +103,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->msgType = ACK;
     dataAck->code = OK;
     dataAck->CxID = htonl(CxID);
-    dataAck->ackNum = htonl(lossRecord->seqNum + 1); 
+    dataAck->ackNum = htonl(lossRecord->seqNum>0?lossRecord->seqNum + 1:data->seqNum+1); 
     gettimeofday(&tv, NULL);
     dataAck->timeStamp = 1000000 * tv.tv_sec + tv.tv_usec;
     dataAck->T_delay = htonl(data->timeStamp - mylog->qBase[mylog->front]->packet->timeStamp);
@@ -115,9 +115,9 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     }
     //printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
     dataAck->recvRate = htonl((uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT));
-    //printf("start to send ack\n");
+    printf("start to send ack\n");
     /* start to send.. */
-    if (sendto(sock, ok, sizeof(struct control_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct control_t))
+    if (sendto(sock, dataAck, sizeof(struct ACK_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct ACK_t))
     {
         DieWithError("sendto() sent a different number of bytes than expected");
     }
@@ -162,13 +162,13 @@ void updateLoss ()
     int index;
 
     /*add all packets(not received) that have exactly 3 higher packet seqNum*/
-    for (i=1;i<=(mylog->rear-mylog->front)-3;i++)
+    for (i=num;i<mylog->qBase[mylog->rear]->packet->seqNum;i--)
     {
-        index = existSeqNum(mylog, num-i);
+        index = existSeqNum(mylog, i-1);
         if (index == -1)
         {
-            T_loss = T_lossCompute(num-i);
-            append(&lossRecord, num-i, T_loss);
+            T_loss = T_lossCompute(i-1);
+            append(&lossRecord, i-1, T_loss);
             countDroped++;
         }
         else
@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
         cliAddrLen = sizeof(clntAddr);
         //printf(" success!!\n");
         /* Block until receive message from a client */
-        if ((recvMsgSize = recvfrom(sock, buffer, sizeof(struct control_t), 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
+        if ((recvMsgSize = recvfrom(sock, buffer, MAX_BUFFER, 0, (struct sockaddr *) &clntAddr, &cliAddrLen)) < 0)
         {
             printf("Failure on recvfrom, client: %s, errno:%d\n", inet_ntoa(clntAddr.sin_addr), errno);
             continue;
@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
                         data = (struct data_t *)buffer;
                         data->RTT = ntohl(data->RTT);
                        // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
-                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->code, ntohl(data->RTT), data->msgLength);
+                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->code, data->RTT, data->msgLength);
                        
 						RTT = data->RTT;
                         printf("data %" PRIu32 " received\n", data->seqNum);
