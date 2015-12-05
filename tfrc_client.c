@@ -124,11 +124,8 @@ void *thread_receive()
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
 
-				printf("----msgType: %d code: %d, ackNum: %d, timestamp: %lu ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum), ackPtr->timeStamp);
-
-				//	printf("enter if --------------\n");
+			//	printf("----msgType: %d code: %d, ackNum: %d, timestamp: %lu ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum), ackPtr->timeStamp);
                     sem_wait(&lock);
-				//	printf("sfdggd\n");
                     tfrc_client.lastAckreceived = ntohl(ackPtr->ackNum); // assuming receiver responds to most recent ACK
                     
                     
@@ -323,7 +320,7 @@ int main(int argc, char *argv[]) {
 		case CLIENT_SENDING:
 				usec2 = get_time(); // returns double in seconds so times MEG
 
-            	if((usec2>=tfrc_client.noFeedbackTimer) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
+            	if((usec2>=tfrc_client.noFeedbackTimer*MEG) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
 					if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
                 
@@ -342,7 +339,7 @@ int main(int argc, char *argv[]) {
 						tfrc_client.timestore[tfrc_client.sequencenum%TIMESTAMPWINDOW] = ntohl(dataPtr->timeStamp);
 
 						if ( tfrc_client.feedbackRecvd == true) {
-							tfrc_client.noFeedbackTimer = get_time() + tfrc_client.t_RTO; // reset the timer
+							tfrc_client.noFeedbackTimer = get_time() + tfrc_client.t_RTO*MEG; // reset the timer
 							tfrc_client.feedbackRecvd = false;
 						}
 				
@@ -363,7 +360,7 @@ int main(int argc, char *argv[]) {
 						tfrc_client.numSent++;
 						usec1 = get_time();
 						sem_post(&lock);
-					} else if(usec2>=tfrc_client.noFeedbackTimer && tfrc_client.feedbackRecvd ==false){ // no feed back timer interrupts
+					} else if(usec2>=tfrc_client.noFeedbackTimer*MEG && tfrc_client.feedbackRecvd ==false){ // no feed back timer interrupts
 						printf("no feed back timer interrupts\n");
 						sem_wait(&lock);
 					
@@ -383,7 +380,7 @@ int main(int argc, char *argv[]) {
 
 						tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
                     
-						tfrc_client.t_RTO = fmax(4 * tfrc_client.R,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
+						tfrc_client.t_RTO = fmax(4 * tfrc_client.R/MEG,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
 						tfrc_client.noFeedbackTimer = get_time()/MEG
 							+ tfrc_client.t_RTO; // update the nofeedbacktimer
 						tfrc_client.feedbackRecvd = true;
