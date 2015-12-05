@@ -392,6 +392,7 @@ int main(int argc, char *argv[]) {
          //   }
 			break;
 		case CLIENT_STOP:
+			printf("Sending stop message to server ...\n");
 			tfrc_client.sessionTime = get_time() - tfrc_client.sessionTime;
             // send out a CLIENT_STOP packet
 
