@@ -139,6 +139,7 @@ void enQueueAndCheck(struct data_t *data)
     {
         /*remove this loss in the loss record and recompute the lossrate*/
         countDroped--;
+        printf("\n--count\n\n");
         compute();
     }else{
         /*else to figure if any new packet need to be looked as loss ones and recompute the lossrate*/
@@ -157,12 +158,15 @@ void updateLoss ()
         return;
 
     /*get the third biggest seqNum*/
-    uint32_t num = getMax3SeqNum(mylog);
-    uint32_t i = 1;
+    uint32_t num = getMaxSeqNum(mylog,3);
+    uint32_t num1 = getMaxSeqNum(mylog,4);
+
+    uint32_t i;
     int index;
 
     /*add all packets(not received) that have exactly 3 higher packet seqNum*/
-    for (i=num;i>mylog->qBase[mylog->rear]->packet->seqNum;i--)
+    for (i=num;i>num1;i--)
+    //for (i=num;i>mylog->qBase[mylog->rear]->packet->seqNum;i--)
     {
         index = existSeqNum(mylog, i-1);
         if (index == -1)
@@ -170,7 +174,6 @@ void updateLoss ()
             T_loss = T_lossCompute(i-1);
             append(&lossRecord, i-1, T_loss);
             countDroped++;
-            printf("\n%dlost\n\n", i-1);
         }
         else
             break;
@@ -274,14 +277,15 @@ void compute()
     float W_tot = 0;
     for (i=n;i>0;i--)
     {
-        I_tot0 = I_tot0 + (array[n-i]*getWeight(i-1,n));
-        W_tot = W_tot + getWeight(i,n);
+        I_tot0 = I_tot0 + (array[n-i]*getWeight(i-1,n+1));
+        W_tot = W_tot + getWeight(i,n+1);
     }
     for (i=n-1;i>=0;i--)
-        I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n));
+        I_tot1 = I_tot1 + (array[n-i]*getWeight(i,n+1));
     I_tot = max(I_tot0, I_tot1);
     I_mean = I_tot/W_tot;
-    lossRate = (uint32_t)((1/(float)I_mean)*1000);
+    printf("I_mean %f W_tot %f I_tot %lu I_count %d", I_mean, W_tot, I_tot, I_count);
+    lossRate = (uint32_t)((1/I_mean)*1000);
 }
 
 uint64_t max(uint64_t i1, uint64_t i2)
@@ -450,7 +454,7 @@ int main(int argc, char *argv[])
                 }
             case DATA :
                 {
-                    printf("received DATA!!\n");
+                    //printf("received DATA!!\n");
                     if (bindFlag == 1 
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
@@ -458,10 +462,10 @@ int main(int argc, char *argv[])
                         data = (struct data_t *)buffer;
                         data->RTT = ntohl(data->RTT);
                        // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
-                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->code, data->RTT, data->msgLength);
+                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->seqNum, data->RTT, data->msgLength);
                        
 						RTT = data->RTT;
-                        printf("data %" PRIu32 " received\n", data->seqNum);
+                        //printf("data %" PRIu32 " received\n", data->seqNum);
                         RTT = 1000000;//for test
                         preLossRate = lossRate;
                         enQueueAndCheck(data);
@@ -490,6 +494,7 @@ void display()
     printf("\nAmount of data received: %d packets and %d bytes\n", countRecv,countRecvBytes);
     printf("Number of ACKs sent: %d packets\n", countAck);
     printf("The total packet loss rate: %.3f\n",countDroped/(seqMax-seqMin+1));
+    printf("The total packet loss : %lf\n",countDroped);
     printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/1000/countAck);
     printf("%lf\n",accuLossrate);
 }
