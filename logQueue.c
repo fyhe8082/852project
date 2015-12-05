@@ -118,6 +118,7 @@ bool isemptyQueue(QUEUE *pq)
 {
     if(pq->front == pq->rear)
     {
+        printf("empty");
         return true;
     }else
         return false;
@@ -136,9 +137,9 @@ bool is_fullQueue(QUEUE *pq)
 }
 
 
-uint32_t getMax3SeqNum(QUEUE *pq)
+uint32_t getMaxSeqNum(QUEUE *pq,int index)
 {
-    uint32_t m[3];
+    uint32_t m[4];
     int i = 0;
     for(i=0;i<3;i++)
     {
@@ -151,16 +152,32 @@ uint32_t getMax3SeqNum(QUEUE *pq)
     int tail = pq->front;
     while(tail != pq->rear)
     {   
-        if((pq->qBase[tail])->packet->seqNum > m[0])
+        if((pq->qBase[tail])->packet->seqNum > m[0]){
+            m[3] = m[2];
+            m[2] = m[1];
+            m[1] = m[0];
             m[0] = pq->qBase[tail]->packet->seqNum;
-        else if(pq->qBase[tail]->packet->seqNum > m[1])
+        }
+        else if(pq->qBase[tail]->packet->seqNum > m[1]){
+            m[3] = m[2];
+            m[2] = m[1];
             m[1] = pq->qBase[tail]->packet->seqNum;
-        else if(pq->qBase[tail]->packet->seqNum > m[2])
+        }
+        else if(pq->qBase[tail]->packet->seqNum > m[2]){
+            m[2] = m[1];
             m[2] = pq->qBase[tail]->packet->seqNum;
+        }
         
         tail = (tail + 1)%MAXN;
     }
-    return m[2];
+    if (index == 3)
+        return m[2];
+    else if (index==4)
+        return m[3];
+    else{
+        printf("index wrong\n");
+        exit(1);
+    }
 }
 
 int existSeqNum(QUEUE *pq, uint32_t seqNum)
@@ -198,14 +215,15 @@ int getIndexBefore(QUEUE *pq, uint32_t S_loss)
 int getIndexAfter(QUEUE *pq, uint32_t S_loss)
 {
     int tail = pq->front;
-    int index = tail;
+    int index = pq->rear;
 
     while(tail != pq->rear)
     {
         if(pq->qBase[tail]->packet->seqNum > S_loss 
                 && pq->qBase[tail]->packet->seqNum 
-                < pq->qBase[index]->packet->seqNum)
+                < pq->qBase[index]->packet->seqNum){
             index = tail;
+        }
 
         tail = (tail + 1)%MAXN;
     }
