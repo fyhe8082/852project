@@ -399,8 +399,6 @@ int main(int argc, char *argv[])
         buffer->msgLength = ntohs(buffer->msgLength);
         buffer->CxID = ntohl(buffer->CxID);
         buffer->seqNum = ntohl(buffer->seqNum);
-        countRecv++;
-        countRecvBytes += recvMsgSize;
         if(buffer->seqNum > seqMax)
             seqMax = buffer->seqNum;
 
@@ -472,6 +470,8 @@ int main(int argc, char *argv[])
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
                     {
+        countRecv++;
+        countRecvBytes += recvMsgSize;
                         data = (struct data_t *)buffer;
                         data->RTT = ntohl(data->RTT);
                        // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
@@ -511,8 +511,10 @@ void display()
     printf("\nAmount of data received: %d packets and %d bytes\n", countRecv,countRecvBytes);
     printf("Number of ACKs sent: %d packets\n", countAck);
     printf("The total packet loss rate: %.3f\n",(double)((seqMax-seqMin+1)-countRecv)/(seqMax-seqMin+1));
+    printf("seqMax%d seqMin%d countRecv%d\n",seqMax,seqMin,countRecv);
     printf("The total packet : %d\n",(seqMax-seqMin+1));
-    printf("The total packet loss : %lf\n",countDroped);
+    //printf("The total packet loss : %lf\n",countDroped);
+    printf("The total packet loss : %lf\n",(seqMax-seqMin+1)-countRecv);
     printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/countAck);
 }
 
