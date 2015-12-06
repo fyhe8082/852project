@@ -452,6 +452,7 @@ int main(int argc, char *argv[])
                                             buffer->seqNum,
                                             buffer->msgSize
                                           );
+                                    printf("\nSTOP OK send!\n\n");
                                     //display the output information
                                     display();
                                     bindFlag = 0;
@@ -514,7 +515,7 @@ void display()
     printf("seqMax%d seqMin%d countRecv%d\n",seqMax,seqMin,countRecv);
     printf("The total packet : %d\n",(seqMax-seqMin+1));
     //printf("The total packet loss : %lf\n",countDroped);
-    printf("The total packet loss : %lf\n",(seqMax-seqMin+1)-countRecv);
+    printf("The total packet loss : %d\n",(seqMax-seqMin+1)-countRecv);
     printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/countAck);
 }
 
