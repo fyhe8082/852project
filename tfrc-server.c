@@ -485,8 +485,7 @@ int main(int argc, char *argv[])
                         enQueueAndCheck(data);
                         if(lossRate > preLossRate)
                         {
-                            sendDataAck(sock, &clntAddr);
-                            alarm((double)RTT/1000000);
+                            alarm(0);
                         }
                         //send each receive
                         //else sendDataAck(sock, &clntAddr);
