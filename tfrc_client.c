@@ -58,6 +58,7 @@ void CNTCCatch(int ignored) {
 	tfrc_client.feedbackRecvd = false;
 
 	usec3 = 0;
+	usec4 = get_time();
 }
 
 /***************** thread for receiving data*********************/ 
@@ -368,7 +369,7 @@ int main(int argc, char *argv[]) {
 					} else if(usec2>=tfrc_client.noFeedbackTimer*MEG && tfrc_client.feedbackRecvd ==false){ // no feed back timer expires
 						printf("no feed back timer expires\n");
 						sem_wait(&lock);
-						if(get_time()-tfrc_client.noAckTimer > 20000000 ) {
+						if(get_time()-tfrc_client.noAckTimer > 180000000 ) {
 							printf("Timeout(180s) for no ACK received.\n");
 						//	pthread_exit(NULL);
 						//	exit(0);
@@ -402,10 +403,12 @@ int main(int argc, char *argv[]) {
 		case CLIENT_STOP:
             // send out a CLIENT_STOP packet
 
-            usec4 = get_time();
+			if(get_time()-usec4 > 10000000) {
+				CNTCStop = true;
+				tfrc_client.feedbackRecvd = true;
+			}
 
-
-            if(usec4-usec3  > MEG) //  repeat the stop packet
+            if(get_time()-usec3  > MEG) //  repeat the stop packet every second
             {
 				printf("Sending stop message to server ...\n");
 				struct control_t *cntrl = (struct control_t*)ackBuffer; 
@@ -420,9 +423,9 @@ int main(int argc, char *argv[]) {
 
 
                 usec3 = get_time();
+                                 
                 
-                
-               // printf("\n Total time of session: %g uSec \n Total Data Sent = %g Packets (%g Bytes)\n Total Acks Received = %g \n Total Average Throughput = %g \n Average Loss Event = %g \n Total Pkt Droppped (dropped rate) = %g (%g)\n",tfrc_client.sessionTime,tfrc_client.numSent,tfrc_client.numSent*tfrc_client.msgSize*8,tfrc_client.numReceived,tfrc_client.avgThroughput,tfrc_client.avgLossEvents,tfrc_client.numDropped,tfrc_client.numDropped/tfrc_client.numSent); 
+				// printf("\n Total time of session: %g uSec \n Total Data Sent = %g Packets (%g Bytes)\n Total Acks Received = %g \n Total Average Throughput = %g \n Average Loss Event = %g \n Total Pkt Droppped (dropped rate) = %g (%g)\n",tfrc_client.sessionTime,tfrc_client.numSent,tfrc_client.numSent*tfrc_client.msgSize*8,tfrc_client.numReceived,tfrc_client.avgThroughput,tfrc_client.avgLossEvents,tfrc_client.numDropped,tfrc_client.numDropped/tfrc_client.numSent); 
              // exit(1) ; //  hard stop 
             }
             else if(tfrc_client.feedbackRecvd)
