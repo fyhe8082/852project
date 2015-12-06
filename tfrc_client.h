@@ -55,7 +55,7 @@ struct ClientPrms {
 	uint32_t t_delay;    // t_delay contained in ACK
 	uint64_t t_now;
 	uint32_t R;       // Round trip time in seconds
-	uint64_t R_sample;
+	uint32_t R_sample;
 	float p;       // loss event rate
 	uint16_t b;     // max number of packets acknowledged by a single TCP ACK, default=1
 	
@@ -90,6 +90,6 @@ struct ClientPrms tfrc_client;
 ClientStatus cStatus;
 int CNTCStop;
 
-double usec1, usec2,usec3,usec4;
+uint64_t usec1, usec2,usec3,usec4;
 
 void initializeparams();
