@@ -80,7 +80,7 @@ struct ClientPrms {
 	double avgThroughput;
 	int sendSTOP;
 
-	uint32_t noAckTimer;
+	uint64_t noAckTimer;
 };
 
 

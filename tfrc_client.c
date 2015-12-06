@@ -42,7 +42,7 @@ void printruntime(int ignored)
 {	
     printf("Current Sending Rate:%-11.2f X_calc:%-11.2f  X_recv:%-11.2f RTT:%d RTO:%-8.2f Loss event rate:%-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R,tfrc_client.t_RTO,tfrc_client.p);
     
-    alarm(2); // reset for next 0.5 second
+    alarm(2); // reset for next 2 second
 }
 
 void catchCntrlTimeout(int ignored) {
@@ -50,7 +50,7 @@ void catchCntrlTimeout(int ignored) {
 	if(++tfrc_client.cntrlTimeoutCounter >= MAXINITTRY)  //Timout 10 times before receiving server ok control, then quit 
 		DieWithError(" Client: Server Initialize Failed, server not responding");
 	alarm(0);
-}
+} 
 
 void CNTCCatch(int ignored) {
 	//sleep(1);
@@ -120,7 +120,7 @@ void *thread_receive()
 
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
-
+					tfrc_client.noAckTimer = get_time();		
 					tfrc_client.numReceived++;
 			//	printf("----msgType: %d code: %d, ackNum: %d, timestamp: %lu ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum), ackPtr->timeStamp);
                     sem_wait(&lock);
@@ -368,7 +368,13 @@ int main(int argc, char *argv[]) {
 					} else if(usec2>=tfrc_client.noFeedbackTimer*MEG && tfrc_client.feedbackRecvd ==false){ // no feed back timer expires
 						printf("no feed back timer expires\n");
 						sem_wait(&lock);
-					
+						if(get_time()-tfrc_client.noAckTimer > 20000000 ) {
+							printf("Timeout(180s) for no ACK received.\n");
+						//	pthread_exit(NULL);
+						//	exit(0);
+						return -1 ;
+						}
+
 			            if(tfrc_client.R != DATAMAX) // if there has been feedback beforehand
 				        {
 					        if(tfrc_client.X_calc > tfrc_client.X_recv*2)
@@ -394,7 +400,6 @@ int main(int argc, char *argv[]) {
            }
 			break;
 		case CLIENT_STOP:
-			tfrc_client.sessionTime = get_time() - tfrc_client.sessionTime;
             // send out a CLIENT_STOP packet
 
             usec4 = get_time();
@@ -416,8 +421,6 @@ int main(int argc, char *argv[]) {
 
                 usec3 = get_time();
                 
-                tfrc_client.avgThroughput = tfrc_client.numSent*tfrc_client.msgSize*8*MEG/tfrc_client.sessionTime;
-                tfrc_client.avgLossEvents = 1.0*tfrc_client.lossEventCounter/tfrc_client.numReceived;
                 
                // printf("\n Total time of session: %g uSec \n Total Data Sent = %g Packets (%g Bytes)\n Total Acks Received = %g \n Total Average Throughput = %g \n Average Loss Event = %g \n Total Pkt Droppped (dropped rate) = %g (%g)\n",tfrc_client.sessionTime,tfrc_client.numSent,tfrc_client.numSent*tfrc_client.msgSize*8,tfrc_client.numReceived,tfrc_client.avgThroughput,tfrc_client.avgLossEvents,tfrc_client.numDropped,tfrc_client.numDropped/tfrc_client.numSent); 
              // exit(1) ; //  hard stop 
@@ -425,23 +428,23 @@ int main(int argc, char *argv[]) {
             else if(tfrc_client.feedbackRecvd)
             {
                 if(CNTCStop) {
+					tfrc_client.sessionTime = get_time() - tfrc_client.sessionTime;
+					tfrc_client.avgThroughput = tfrc_client.numSent*tfrc_client.msgSize*8*MEG/tfrc_client.sessionTime;
+					tfrc_client.avgLossEvents = 1.0*tfrc_client.lossEventCounter/tfrc_client.numReceived;
 					
-               printf("Total time of session: %.2lf uSec\n", tfrc_client.sessionTime);
-			   printf("Total amount of data sent: %.0lf Packets (%.0lf Bytes)\n", tfrc_client.numSent, tfrc_client.numSent*tfrc_client.msgSize*8);
-			   printf("Total number of ACKs recvd: %.0lf\n", tfrc_client.numReceived);
-			   printf("Total average throughput: %.2lf bps\n", tfrc_client.avgThroughput);
-			   printf("Average loss event rates: %.2lf\n", tfrc_client.avgLossEvents);
-			   printf("Total Pkt Dropped (dropped rate): %.0f (%.3f)\n", tfrc_client.numDropped, tfrc_client.numDropped/tfrc_client.numSent);
+					printf("Total time of session: %.2lf uSec\n", tfrc_client.sessionTime);
+					printf("Total amount of data sent: %.0lf Packets (%.0lf Bytes)\n", tfrc_client.numSent, tfrc_client.numSent*tfrc_client.msgSize*8);
+					printf("Total number of ACKs recvd: %.0lf\n", tfrc_client.numReceived);
+					printf("Total average throughput: %.2lf bps\n", tfrc_client.avgThroughput);
+					printf("Average loss event rates: %.2lf\n", tfrc_client.avgLossEvents);
+					printf("Total Pkt Dropped (dropped rate): %.0f (%.3f)\n", tfrc_client.numDropped, tfrc_client.numDropped/tfrc_client.numSent);
                     exit(1);
 				}
 
                 break;
             }
-
-		//	break;
 		}
 	}
-//	pthread_exit(NULL);
 }
 
 
