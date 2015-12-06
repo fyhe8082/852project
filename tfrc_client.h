@@ -65,7 +65,7 @@ struct ClientPrms {
 	double numDropped;
 	uint64_t latestPktTimestamp;
 	double lastAckreceived;
-	uint32_t lossEventCounter;
+	double lossEventCounter;
 
 	double numSent;
 	double numReceived;
@@ -80,7 +80,7 @@ struct ClientPrms {
 	double avgThroughput;
 	int sendSTOP;
 
-	uint32_t noAckTimer;
+	uint64_t noAckTimer;
 };
 
 
