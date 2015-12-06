@@ -130,7 +130,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     if (dataAck->recvRate == 0)
         return;
     printf("\nstart to send ack\n");
-    printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u nowT %lu \n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate), temp);
+    //printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u nowT %lu \n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate), temp);
 
     /* start to send.. */
     if (sendto(sock, dataAck, sizeof(struct ACK_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct ACK_t))
@@ -327,7 +327,7 @@ void compute()
         if (tempTot < 10000 && tempTot != 0)
         {
             I_tot0 = I_tot0 + tempTot;
-            printf("Itot part%lf\n\n",tempTot);
+            //printf("Itot part%lf\n\n",tempTot);
             W_tot = W_tot + getWeight(i,n);
         }
     }
@@ -457,6 +457,10 @@ int main(int argc, char *argv[])
                                 {
                                     bindFlag = 1;
                                     //init the record var
+                                    countRecv = 0;
+                                    countRecvBytes = recvMsgSize;
+                                    seqMax = buffer->seqNum;
+                                    seqMin = buffer->seqNum;
 
                                     bindPort = clntAddr.sin_port;
                                     bindIP = clntAddr.sin_addr.s_addr;
@@ -503,10 +507,6 @@ int main(int argc, char *argv[])
             case DATA :
                 {
                     //printf("received DATA!!\n");
-                                    countRecv = 1;
-                                    countRecvBytes = recvMsgSize;
-                                    seqMax = buffer->seqNum;
-                                    seqMin = buffer->seqNum;
                     if (bindFlag == 1 
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
@@ -555,14 +555,14 @@ void display()
     if (seqMax==0)
         count = 0;
     else
-        count = seqMax-seqMin+1;
+        count = seqMax-seqMin;
     printf("\nAmount of data received: %d packets and %d bytes\n", countRecv,countRecvBytes);
     printf("Number of ACKs sent: %d packets\n", countAck);
     printf("The total packet loss rate: %.3f\n",(double)(count-countRecv)/(seqMax-seqMin+1));
-    printf("seqMax%d seqMin%d countRecv%d\n",seqMax,seqMin,countRecv);
-    printf("The total packet : %d\n",(seqMax-seqMin+1));
+    //printf("seqMax%d seqMin%d countRecv%d\n",seqMax,seqMin,countRecv);
+    //printf("The total packet : %d\n",count);
     //printf("The total packet loss : %lf\n",countDroped);
-    printf("The total packet loss : %d\n",count-countRecv);
+    //printf("The total packet loss : %d\n",count-countRecv);
     printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/countAck);
 }
 
