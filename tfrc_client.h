@@ -65,7 +65,7 @@ struct ClientPrms {
 	double numDropped;
 	uint64_t latestPktTimestamp;
 	double lastAckreceived;
-	uint32_t lossEventCounter;
+	double lossEventCounter;
 
 	double numSent;
 	double numReceived;

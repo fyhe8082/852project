@@ -115,13 +115,13 @@ void *thread_receive()
             {
 				struct ACK_t *ackPtr = (struct ACK_t*) ackBufferR;
 
-				tfrc_client.numReceived++;
 			
 				printf("----msgType: %d code: %d, ackNum: %u ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum));
 
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
 
+					tfrc_client.numReceived++;
 			//	printf("----msgType: %d code: %d, ackNum: %d, timestamp: %lu ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum), ackPtr->timeStamp);
                     sem_wait(&lock);
                     tfrc_client.lastAckreceived = ntohl(ackPtr->ackNum); // assuming receiver responds to most recent ACK
@@ -417,7 +417,7 @@ int main(int argc, char *argv[]) {
                 usec3 = get_time();
                 
                 tfrc_client.avgThroughput = tfrc_client.numSent*tfrc_client.msgSize*8*MEG/tfrc_client.sessionTime;
-                tfrc_client.avgLossEvents = tfrc_client.lossEventCounter/tfrc_client.numReceived;
+                tfrc_client.avgLossEvents = 1.0*tfrc_client.lossEventCounter/tfrc_client.numReceived;
                 
                // printf("\n Total time of session: %g uSec \n Total Data Sent = %g Packets (%g Bytes)\n Total Acks Received = %g \n Total Average Throughput = %g \n Average Loss Event = %g \n Total Pkt Droppped (dropped rate) = %g (%g)\n",tfrc_client.sessionTime,tfrc_client.numSent,tfrc_client.numSent*tfrc_client.msgSize*8,tfrc_client.numReceived,tfrc_client.avgThroughput,tfrc_client.avgLossEvents,tfrc_client.numDropped,tfrc_client.numDropped/tfrc_client.numSent); 
              // exit(1) ; //  hard stop 
@@ -430,7 +430,7 @@ int main(int argc, char *argv[]) {
 			   printf("Total amount of data sent: %.0lf Packets (%.0lf Bytes)\n", tfrc_client.numSent, tfrc_client.numSent*tfrc_client.msgSize*8);
 			   printf("Total number of ACKs recvd: %.0lf\n", tfrc_client.numReceived);
 			   printf("Total average throughput: %.2lf bps\n", tfrc_client.avgThroughput);
-			   printf("Average loss event rates: %.0lf\n", tfrc_client.avgLossEvents);
+			   printf("Average loss event rates: %.2lf\n", tfrc_client.avgLossEvents);
 			   printf("Total Pkt Dropped (dropped rate): %.0f (%.3f)\n", tfrc_client.numDropped, tfrc_client.numDropped/tfrc_client.numSent);
                     exit(1);
 				}
