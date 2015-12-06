@@ -43,7 +43,7 @@ void newsendingrate()
 {
     double fq;
     
-    if(tfrc_client.p>0)
+    if(tfrc_client.p>0) // congestion avoidance phase
 	{
 		fq = (tfrc_client.R/MEG)*sqrt(2*tfrc_client.b*tfrc_client.p/3) + 
 			(tfrc_client.t_RTO*(3*sqrt(3*tfrc_client.b*tfrc_client.p/8)*tfrc_client.p*(1+32*tfrc_client.p*tfrc_client.p)));	
@@ -52,7 +52,7 @@ void newsendingrate()
         tfrc_client.X_trans = fmax(fmin(fmin(tfrc_client.X_calc,2*tfrc_client.X_recv),tfrc_client.maxAllowedThroughput),tfrc_client.msgSize*8.0/t_mbi);
     }
     else
-        if(tfrc_client.t_now-tfrc_client.tld >= tfrc_client.R)
+        if(tfrc_client.t_now-tfrc_client.tld >= tfrc_client.R) // initial slow start
         {
             tfrc_client.X_trans = fmax(fmin(fmin(2*tfrc_client.X_trans,2*tfrc_client.X_recv),tfrc_client.maxAllowedThroughput),tfrc_client.msgSize*8.0/tfrc_client.R/MEG);
             tfrc_client.tld = tfrc_client.t_now;
