@@ -79,6 +79,8 @@ struct ClientPrms {
 	double avgLossEvents;
 	double avgThroughput;
 	int sendSTOP;
+
+	uint32_t noAckTimer;
 };
 
 

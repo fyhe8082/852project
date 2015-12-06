@@ -40,7 +40,7 @@ char ackBufferR[ACKMSGSIZE+1];
 
 void printruntime(int ignored)
 {	
-    printf("X_trans:%-11.2f X_calc:%-11.2f  X.recv:%-11.2f RTT:%d RTO:%-8.2f Loss event rate:%-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R,tfrc_client.t_RTO,tfrc_client.p);
+    printf("Current Sending Rate:%-11.2f X_calc:%-11.2f  X_recv:%-11.2f RTT:%d RTO:%-8.2f Loss event rate:%-1.2f\n",tfrc_client.X_trans,tfrc_client.X_calc,tfrc_client.X_recv,tfrc_client.R,tfrc_client.t_RTO,tfrc_client.p);
     
     alarm(2); // reset for next 0.5 second
 }
@@ -117,7 +117,7 @@ void *thread_receive()
 
 				tfrc_client.numReceived++;
 			
-				printf("----msgType: %d code: %d, ackNum: %d ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum));
+				printf("----msgType: %d code: %d, ackNum: %u ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum));
 
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
@@ -181,17 +181,17 @@ void *thread_receive()
             }
             break;
         case CLIENT_STOP:
-            if((receivedStrLen = recvfrom(tfrc_client.sock, ackBufferR, MSGMAX, 0,
-                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) != CNTRLMSGSIZE)
+            if((receivedStrLen = recvfrom(tfrc_client.sock, dataBufferR, MSGMAX, 0,
+                                          (struct sockaddr *) &(tfrc_client.servAddr), &(tfrc_client.servAddrLen))) < 0)
                     printf(" Receive Error from Server from CLIENT_STOP !!\n");
 
             else
             {
-				struct ACK_t* ackPtr = (struct ACK_t *)ackBufferR;
+				struct ACK_t* ackPtr = (struct ACK_t *)dataBufferR;
                 // check for correctness of the received ACK.
                 if(ackPtr->msgType == CONTROL && ackPtr->code==OK) //  server responded
                 {
-                    
+                    printf("stop successfully\n"); 
                     tfrc_client.feedbackRecvd = true; // to start packet transfer
 
                     CNTCStop=true;
@@ -274,6 +274,8 @@ int main(int argc, char *argv[]) {
 	tfrc_client.sequencenum = setupCntrlMsg(startBuffer, tfrc_client.msgSize, tfrc_client.connectionID);
 	tfrc_client.expectedACK = tfrc_client.sequencenum+1;
 
+	printf("initial sequence number: %d \n", tfrc_client.sequencenum);
+
 	setupDataMsg(dataBuffer, tfrc_client.msgSize, tfrc_client.sequencenum,tfrc_client.connectionID);
 	setupAckMsg(ackBuffer);
  
@@ -320,7 +322,7 @@ int main(int argc, char *argv[]) {
 
             	if((usec2>=tfrc_client.noFeedbackTimer*MEG) || (usec2-usec1 >= tfrc_client.timebetnPackets*MEG)) {
                 
-					printf("usec2:%lu, NOfeedbackTimer:%lf\n", usec2, tfrc_client.noFeedbackTimer*MEG);
+				//	printf("usec2:%lu, NOfeedbackTimer:%lf\n", usec2, tfrc_client.noFeedbackTimer*MEG);
 					if(usec2-usec1>= tfrc_client.timebetnPackets*MEG) {	// ready to send
 						
 					//	printf("sending data ...\n");
@@ -329,7 +331,7 @@ int main(int argc, char *argv[]) {
 						sem_wait(&lock);
 						struct data_t *dataPtr = (struct data_t*)dataBuffer;
 						dataPtr->seqNum = htonl(++tfrc_client.sequencenum); // increments seqnum before attaching
-						//	printf("seq: %d\n", tfrc_client.sequencenum);
+						printf("seq: %d --- %d\n", tfrc_client.sequencenum);
 				
 						tfrc_client.latestPktTimestamp = get_time(); // when the packet is sent
 						dataPtr->timeStamp = tfrc_client.latestPktTimestamp; //  time now in usec
@@ -366,7 +368,7 @@ int main(int argc, char *argv[]) {
 					
 			            if(tfrc_client.R != DATAMAX) // if there has been feedback beforehand
 				        {
-							printf("feedback!!!");
+							printf("feedback!!!\n");
 					        if(tfrc_client.X_calc > tfrc_client.X_recv*2)
 						        tfrc_client.X_recv = fmax(tfrc_client.X_recv/2,tfrc_client.msgSize*8.0/(2*t_mbi));
 							else
@@ -377,7 +379,7 @@ int main(int argc, char *argv[]) {
 							tfrc_client.X_trans = fmax(tfrc_client.X_trans/2,tfrc_client.msgSize*8.0/t_mbi);
 						}
                     
-						tfrc_client.sequencenum = tfrc_client.expectedACK-1; // look for the last ack received 
+					//	tfrc_client.sequencenum = tfrc_client.expectedACK-1; // look for the last ack received 
 
 						tfrc_client.timebetnPackets = tfrc_client.msgSize * 8.0 / tfrc_client.X_trans;
                     
@@ -415,14 +417,14 @@ int main(int argc, char *argv[]) {
 
                 tfrc_client.sendSTOP = true;
                 
-                tfrc_client.avgThroughput = tfrc_client.numSent*tfrc_client.msgSize*8*1000000.0/tfrc_client.sessionTime;
+                tfrc_client.avgThroughput = tfrc_client.numSent*tfrc_client.msgSize*8*MEG/tfrc_client.sessionTime;
                 tfrc_client.avgLossEvents = tfrc_client.lossEventCounter/tfrc_client.numReceived;
                 
                // printf("\n Total time of session: %g uSec \n Total Data Sent = %g Packets (%g Bytes)\n Total Acks Received = %g \n Total Average Throughput = %g \n Average Loss Event = %g \n Total Pkt Droppped (dropped rate) = %g (%g)\n",tfrc_client.sessionTime,tfrc_client.numSent,tfrc_client.numSent*tfrc_client.msgSize*8,tfrc_client.numReceived,tfrc_client.avgThroughput,tfrc_client.avgLossEvents,tfrc_client.numDropped,tfrc_client.numDropped/tfrc_client.numSent); 
                printf("Total time of session: %.2lf uSec\n", tfrc_client.sessionTime);
 			   printf("Total amount of data sent: %.0lf Packets (%.0lf Bytes)\n", tfrc_client.numSent, tfrc_client.numSent*tfrc_client.msgSize*8);
 			   printf("Total number of ACKs recvd: %.0lf\n", tfrc_client.numReceived);
-			   printf("Total average throughput: %.2lf\n", tfrc_client.avgThroughput);
+			   printf("Total average throughput: %.2lf bps\n", tfrc_client.avgThroughput);
 			   printf("Average loss event rates: %.0lf\n", tfrc_client.avgLossEvents);
 			   printf("Total Pkt Dropped (dropped rate): %.0f (%.3f)\n", tfrc_client.numDropped, tfrc_client.numDropped/tfrc_client.numSent);
                exit(1) ; //  hard stop 
