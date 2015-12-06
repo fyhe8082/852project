@@ -113,12 +113,12 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->ackNum = htonl(ackNum>0?ackNum:data->seqNum+1); 
     gettimeofday(&tv, NULL);
     //if (ackNum>0)
-    //    dataAck->timeStamp = lastestTimeStamp;
+        dataAck->timeStamp = lastestTimeStamp;
     //else
-        dataAck->timeStamp = mylog->qBase[mylog->rear-1]->timeArrived;
+    //    dataAck->timeStamp = mylog->qBase[mylog->rear-1]->timeArrived;
     temp = 1000000 * tv.tv_sec + tv.tv_usec;
-    dataAck->T_delay = htonl(temp - mylog->qBase[mylog->rear-1]->timeArrived);
-    //dataAck->T_delay = htonl(temp - dataAck->timeStamp);
+    //dataAck->T_delay = htonl(temp - mylog->qBase[mylog->rear-1]->timeArrived);
+    dataAck->T_delay = htonl(temp - dataAck->timeStamp);
     dataAck->lossRate = htonl(lossRate);
     //multi 1000 then take the floor for recvRate
     if (RTT == 0){
@@ -138,7 +138,8 @@ void sendDataAck(int sock,struct sockaddr_in *server)
         DieWithError("sendto() sent a different number of bytes than expected");
     }
     countAck++;
-    accuLossrate += dataAck->lossRate/1000;
+    accuLossrate += ntohl(dataAck->lossRate)/1000;
+    //printf("lossRate + dataAck->lossRate %lu\n\n", dataAck->lossRate);
 }
 
 void enQueueAndCheck(struct data_t *data)
@@ -146,6 +147,7 @@ void enQueueAndCheck(struct data_t *data)
     entry->packet = data;
     gettimeofday(&tv, NULL);
     entry->timeArrived = 1000000 * tv.tv_sec + tv.tv_usec; 
+    lastestTimeStamp = entry->timeArrived;
     //printf("%" PRIu64 "\n\n",entry->timeArrived);
     //printf("%" PRIu64 "\n",tv.tv_sec);
     //printf("%" PRIu64 "\n",tv.tv_usec);
@@ -201,7 +203,6 @@ void updateLoss ()
     //if (ackNum != latestNum){
       //  preAckNum = ackNum;
         ackNum = latestNum;
-        lastestTimeStamp = mylog->qBase[j]->timeArrived;
     //}
 }
 
@@ -292,9 +293,20 @@ void compute()
         }
         p=p->next;
     }
-
+    //uint64_t min=4444444444444444;
+    //for (i=0;i<9;i++)
+    //{
+    //    if (array[i]<min)
+    //        min = array[i];
+    //}
+    //for (i=0;i<9;i++)
+    //{
+    //    if (array[i]>444444444444444)
+    //        array[i] = min;
+    //}
     gettimeofday(&tv, NULL);
     array[0] = (1000000 * tv.tv_sec + tv.tv_usec) - preTime;
+    //printf("array[0]%lu timenow%lu pretime%lu\n\n", array[0], (1000000 * tv.tv_sec + tv.tv_usec), preTime);
 
     /*compute the loss event rate*/
     int n;
@@ -307,19 +319,24 @@ void compute()
     double I_tot = 0;
     double I_mean = 0;
     double W_tot = 0;
-    for (i=0;i<n;i++)
+    double tempTot;
+    for (i=1;i<n;i++)
     {
-        I_tot0 = I_tot0 + ((double)array[i]*getWeight(i,n)/1000000);
-        //printf("%lf\n\n",(double)array[i]*getWeight(i,n)/1000000);
-        W_tot = W_tot + getWeight(i,n);
+        tempTot = ((double)array[i]*getWeight(i,n-1)/1000000);
+        if (tempTot < 1000)
+        {
+            I_tot0 = I_tot0 + tempTot;
+            printf("Itot part%lf\n\n",tempTot);
+            W_tot = W_tot + getWeight(i,n);
+        }
     }
     for (i=1;i<=n;i++)
         I_tot1 = I_tot1 + ((double)array[i]*getWeight(i-1,n)/1000000);
     //I_tot = max(I_tot0, I_tot1);
-    I_tot = I_tot1;
+    I_tot = I_tot0;
     //printf("0%lf 1%lf\n\n", I_tot0, I_tot1);
     I_mean = I_tot/W_tot;
-    //printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
+    printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
     lossRate = (uint32_t)((1/I_mean)*1000);
 }
 
