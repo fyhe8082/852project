@@ -106,11 +106,15 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->msgType = ACK;
     dataAck->code = OK;
     dataAck->CxID = htonl(CxID);
-    dataAck->ackNum = htonl(lossRecord->seqNum>0?lossRecord->seqNum + 1:data->seqNum+1); 
+    dataAck->ackNum = htonl(lossRecord->seqNum>0?lossRecord->seqNum:data->seqNum+1); 
     gettimeofday(&tv, NULL);
-    dataAck->timeStamp = mylog->qBase[mylog->rear-1]->timeArrived;
+    if (lossRecord->seqNum>0)
+        dataAck->timeStamp = mylog->qBase[existSeqNum(mylog,lossRecord->seqNum-1)]->timeArrived;
+    else
+        dataAck->timeStamp = mylog->qBase[mylog->rear-1]->timeArrived;
     temp = 1000000 * tv.tv_sec + tv.tv_usec;
-    dataAck->T_delay = htonl(temp - mylog->qBase[mylog->rear-1]->timeArrived);
+    //dataAck->T_delay = htonl(temp - mylog->qBase[mylog->rear-1]->timeArrived);
+    dataAck->T_delay = htonl(temp - dataAck->timeStamp);
     dataAck->lossRate = htonl(lossRate);
     //multi 1000 then take the floor for recvRate
     if (RTT == 0){
