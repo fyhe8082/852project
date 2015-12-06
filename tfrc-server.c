@@ -259,6 +259,7 @@ void compute()
 
     while(p->next != NULL)
     {
+        p->next->isNewLoss = false;
         interval = p->next->timeArrived - p->timeArrived;
         if(interval > RTT)
         {
@@ -323,7 +324,7 @@ void compute()
     for (i=1;i<n;i++)
     {
         tempTot = ((double)array[i]*getWeight(i,n-1)/1000000);
-        if (tempTot < 100)
+        if (tempTot < 10000 && tempTot != 0)
         {
             I_tot0 = I_tot0 + tempTot;
             printf("Itot part%lf\n\n",tempTot);
@@ -456,10 +457,6 @@ int main(int argc, char *argv[])
                                 {
                                     bindFlag = 1;
                                     //init the record var
-                                    countRecv = 0;
-                                    countRecvBytes = recvMsgSize;
-                                    seqMax = buffer->seqNum;
-                                    seqMin = buffer->seqNum;
 
                                     bindPort = clntAddr.sin_port;
                                     bindIP = clntAddr.sin_addr.s_addr;
@@ -506,10 +503,15 @@ int main(int argc, char *argv[])
             case DATA :
                 {
                     //printf("received DATA!!\n");
+                                    countRecv = 1;
+                                    countRecvBytes = recvMsgSize;
+                                    seqMax = buffer->seqNum;
+                                    seqMin = buffer->seqNum;
                     if (bindFlag == 1 
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
                     {
+    printf("The total packet loss : %lf\n",countDroped);
         countRecv++;
         countRecvBytes += recvMsgSize;
                         data = (struct data_t *)buffer;
@@ -549,13 +551,18 @@ int main(int argc, char *argv[])
 
 void display()
 {
+    int count;
+    if (seqMax==0)
+        count = 0;
+    else
+        count = seqMax-seqMin+1;
     printf("\nAmount of data received: %d packets and %d bytes\n", countRecv,countRecvBytes);
     printf("Number of ACKs sent: %d packets\n", countAck);
-    printf("The total packet loss rate: %.3f\n",(double)((seqMax-seqMin+1)-countRecv)/(seqMax-seqMin+1));
+    printf("The total packet loss rate: %.3f\n",(double)(count-countRecv)/(seqMax-seqMin+1));
     printf("seqMax%d seqMin%d countRecv%d\n",seqMax,seqMin,countRecv);
     printf("The total packet : %d\n",(seqMax-seqMin+1));
     //printf("The total packet loss : %lf\n",countDroped);
-    printf("The total packet loss : %d\n",(seqMax-seqMin+1)-countRecv);
+    printf("The total packet loss : %d\n",count-countRecv);
     printf("Average of loss event rates sent to the send: %.3f\n", countAck==0 ? 0 : accuLossrate/countAck);
 }
 
