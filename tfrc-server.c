@@ -44,7 +44,10 @@ static double countDroped = 0;
 static double accuLossrate = 0;
 static uint32_t seqMax = 0;
 static uint32_t seqMin = 0;
+static uint32_t ackNum = 0;
+static uint32_t preAckNum;
 static uint64_t temp;
+static uint64_t lastestTimeStamp;
 
 /*the newest RTT*/
 static uint32_t RTT=0;
@@ -106,10 +109,10 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->msgType = ACK;
     dataAck->code = OK;
     dataAck->CxID = htonl(CxID);
-    dataAck->ackNum = htonl(lossRecord->seqNum>0?lossRecord->seqNum:data->seqNum+1); 
+    dataAck->ackNum = htonl(ackNum>0?ackNum:data->seqNum+1); 
     gettimeofday(&tv, NULL);
-    if (lossRecord->seqNum>0)
-        dataAck->timeStamp = mylog->qBase[existSeqNum(mylog,lossRecord->seqNum-1)]->timeArrived;
+    if (ackNum>0)
+        dataAck->timeStamp = lastestTimeStamp;
     else
         dataAck->timeStamp = mylog->qBase[mylog->rear-1]->timeArrived;
     temp = 1000000 * tv.tv_sec + tv.tv_usec;
@@ -124,7 +127,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     //printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
     dataAck->recvRate = htonl((uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT));
     printf("\nstart to send ack\n");
-    printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u nowT %lu timeArrived %lu\n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate), temp, mylog->qBase[mylog->rear-1]->timeArrived);
+    printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u nowT %lu timeArrived %lu\n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate), temp, lastestTimeStamp);
 
     /* start to send.. */
     if (sendto(sock, dataAck, sizeof(struct ACK_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct ACK_t))
@@ -172,7 +175,8 @@ void updateLoss ()
     uint32_t num1 = getMaxSeqNum(mylog,4);
 
     uint32_t i;
-    int index;
+    int index,j;//index for return value of existSeqNum, j for last receive packet index
+    uint32_t latestNum;
 
     /*add all packets(not received) that have exactly 3 higher packet seqNum*/
     for (i=num;i>num1;i--)
@@ -184,9 +188,17 @@ void updateLoss ()
             T_loss = T_lossCompute(i-1);
             append(&lossRecord, i-1, T_loss);
             countDroped++;
+            latestNum = i-1;
         }
-        else
+        else{
+            j = index;
             break;
+        }
+    }
+    if (ackNum != latestNum){
+        preAckNum = ackNum;
+        ackNum = latestNum;
+        lastestTimeStamp = mylog->qBase[j]->timeArrived;
     }
 }
 
@@ -538,7 +550,8 @@ void handle_alarm(int ignored)
     printf("enter alarm handler\n");
     if(bindFlag == 0)
         return;
-    sendDataAck(sock, &clntAddr);
+    if(preAckNum != ackNum)
+        sendDataAck(sock, &clntAddr);
     ualarm(RTT,0);
     return;
 }
