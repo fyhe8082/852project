@@ -117,7 +117,7 @@ void *thread_receive()
 				struct ACK_t *ackPtr = (struct ACK_t*) ackBufferR;
 
 			
-				printf("----msgType: %d code: %d, ackNum: %u ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum));
+			//	printf("----msgType: %d code: %d, ackNum: %u ---\n", ackPtr->msgType, ackPtr->code, ntohl(ackPtr->ackNum));
 
                 if(ackPtr->msgType == ACK && ackPtr->code == OK)
                 {
@@ -135,7 +135,7 @@ void *thread_receive()
 					}
 					else
 					{
-						printf("!!! lastAckreceived < expectedACK\n");
+					//	printf("!!! lastAckreceived < expectedACK\n");
 					}
                     sem_post(&lock);
 						 
@@ -150,11 +150,11 @@ void *thread_receive()
 				
 					tfrc_client.lossEventCounter +=tfrc_client.p;
 					
-					printf("~~~~~~t_now: %lu, t_recvdata: %lu, t_delay: %d, X_recv: %lf, loss event rate:%f, R_sample: %d~~~~~~~\n ",	tfrc_client.t_now, ackPtr->timeStamp, tfrc_client.t_delay,
-							tfrc_client.X_recv, tfrc_client.p, tfrc_client.R_sample);
+				//	printf("~~~~~~t_now: %lu, t_recvdata: %lu, t_delay: %d, X_recv: %lf, loss event rate:%f, R_sample: %d~~~~~~~\n ",	tfrc_client.t_now, ackPtr->timeStamp, tfrc_client.t_delay,
+							//tfrc_client.X_recv, tfrc_client.p, tfrc_client.R_sample);
 						
                     if(tfrc_client.R == DATAMAX) {
-						printf("First Feedback has been received!!\n");  
+				//		printf("First Feedback has been received!!\n");  
                         tfrc_client.R = tfrc_client.R_sample;
 					}//  usually the case for the first feedback
                     else {	
@@ -278,7 +278,7 @@ int main(int argc, char *argv[]) {
 	tfrc_client.sequencenum = setupCntrlMsg(startBuffer, tfrc_client.msgSize, tfrc_client.connectionID);
 	tfrc_client.expectedACK = tfrc_client.sequencenum+1;
 
-	printf("initial sequence number: %d \n", tfrc_client.sequencenum);
+//	printf("initial sequence number: %d \n", tfrc_client.sequencenum);
 
 	setupDataMsg(dataBuffer, tfrc_client.msgSize, tfrc_client.sequencenum,tfrc_client.connectionID);
 	setupAckMsg(ackBuffer);
@@ -311,7 +311,7 @@ int main(int argc, char *argv[]) {
 		switch(cStatus) {
 		case CLIENT_START:
 			if(tfrc_client.alarmtimeout) {
-				printf("send control----\n");
+			//	printf("send control----\n");
 				alarm(0); 
 				if(sendto(tfrc_client.sock, startBuffer, CNTRLMSGSIZE, 0, (struct sockaddr *)
 						&(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != CNTRLMSGSIZE) {
@@ -354,8 +354,6 @@ int main(int argc, char *argv[]) {
 							uint16_t sendsize = ntohs(dataPtr->msgLength);
 							if (sendto(tfrc_client.sock, dataBuffer, sendsize, 0, (struct sockaddr *)
 								&(tfrc_client.servAddr), sizeof(tfrc_client.servAddr)) != sendsize){
-								printf("failed");
-							//	printf("%s", tfrc_client.servAddr);
 								DieWithError("sendto() sent a different number of bytes than expected.");
 							}
 						}
@@ -367,7 +365,7 @@ int main(int argc, char *argv[]) {
 						usec1 = get_time();
 						sem_post(&lock);
 					} else if(usec2>=tfrc_client.noFeedbackTimer*MEG && tfrc_client.feedbackRecvd ==false){ // no feed back timer expires
-						printf("no feed back timer expires\n");
+						//printf("no feed back timer expires\n");
 						sem_wait(&lock);
 						if(get_time()-tfrc_client.noAckTimer > 180000000 ) {
 							printf("Timeout(180s) for no ACK received.\n");
