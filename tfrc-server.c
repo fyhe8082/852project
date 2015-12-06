@@ -44,6 +44,7 @@ static double countDroped = 0;
 static double accuLossrate = 0;
 static uint32_t seqMax = 0;
 static uint32_t seqMin = 0;
+static uint64_t temp;
 
 /*the newest RTT*/
 static uint32_t RTT=0;
@@ -108,7 +109,8 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->ackNum = htonl(lossRecord->seqNum>0?lossRecord->seqNum + 1:data->seqNum+1); 
     gettimeofday(&tv, NULL);
     dataAck->timeStamp = mylog->qBase[mylog->rear-1]->timeArrived;
-    dataAck->T_delay = htonl(1000000 * tv.tv_sec + tv.tv_usec - mylog->qBase[mylog->rear-1]->timeArrived);
+    temp = 1000000 * tv.tv_sec + tv.tv_usec;
+    dataAck->T_delay = htonl(temp - mylog->qBase[mylog->rear-1]->timeArrived);
     dataAck->lossRate = htonl(lossRate);
     //multi 1000 then take the floor for recvRate
     if (RTT == 0){
@@ -118,7 +120,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     //printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
     dataAck->recvRate = htonl((uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT));
     printf("\nstart to send ack\n");
-    printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u\n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate));
+    printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u nowT %lu timeArrived %lu\n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate), temp, mylog->qBase[mylog->rear-1]->timeArrived);
 
     /* start to send.. */
     if (sendto(sock, dataAck, sizeof(struct ACK_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct ACK_t))
