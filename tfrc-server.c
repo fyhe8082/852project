@@ -45,8 +45,9 @@ static double accuLossrate = 0;
 static uint32_t seqMax = 0;
 static uint32_t seqMin = 0;
 static uint32_t ackNum = 0;
-static uint32_t preAckNum;
-static uint64_t temp;
+static uint32_t preNum;//for change if any new data come
+static uint32_t newestNum;//for change if any new data come
+static uint64_t temp;//for reserve for current time
 static uint64_t lastestTimeStamp;
 
 /*the newest RTT*/
@@ -195,11 +196,11 @@ void updateLoss ()
             break;
         }
     }
-    if (ackNum != latestNum){
-        preAckNum = ackNum;
+    //if (ackNum != latestNum){
+      //  preAckNum = ackNum;
         ackNum = latestNum;
         lastestTimeStamp = mylog->qBase[j]->timeArrived;
-    }
+    //}
 }
 
 /*compute the T_loss*/
@@ -494,6 +495,7 @@ int main(int argc, char *argv[])
         countRecvBytes += recvMsgSize;
                         data = (struct data_t *)buffer;
                         data->RTT = ntohl(data->RTT);
+                        newestNum = data->seqNum;
                        // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
                         //printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->seqNum, data->RTT, data->msgLength);
                        
@@ -506,7 +508,7 @@ int main(int argc, char *argv[])
                         enQueueAndCheck(data);
                         if(lossRate > preLossRate)
                         {
-                            printf("\nalarm now\n");
+                            //printf("\nalarm now\n");
                             ualarm(0,0);
                             sendDataAck(sock, &clntAddr);
                             ualarm(RTT,0);
@@ -547,11 +549,12 @@ void sigHandler(int sig)
 
 void handle_alarm(int ignored)
 {
-    printf("enter alarm handler\n");
+    //printf("enter alarm handler\n");
     if(bindFlag == 0)
         return;
-    if(preAckNum != ackNum)
+    if(preNum != newestNum)
         sendDataAck(sock, &clntAddr);
+    preNum = newestNum;
     ualarm(RTT,0);
     return;
 }
