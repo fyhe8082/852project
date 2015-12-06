@@ -24,7 +24,7 @@
 /*largest amount of data on a socket read*/
 #define MAX_BUFFER 65000
 /* largest queue number */
-#define MAXN 650000 
+#define MAXN 650 
 
 
 /* Message type */
