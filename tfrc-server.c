@@ -323,7 +323,7 @@ void compute()
     for (i=1;i<n;i++)
     {
         tempTot = ((double)array[i]*getWeight(i,n-1)/1000000);
-        if (tempTot < 1000)
+        if (tempTot < 1)
         {
             I_tot0 = I_tot0 + tempTot;
             printf("Itot part%lf\n\n",tempTot);
