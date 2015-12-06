@@ -455,7 +455,7 @@ int main(int argc, char *argv[])
                                     printf("\nSTOP OK send!\n\n");
                                     //display the output information
                                     display();
-                                    ualarm(0,0)
+                                    ualarm(0,0);
                                     bindFlag = 0;
                                 }
                                 break;
