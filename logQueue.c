@@ -72,8 +72,8 @@ void enQueue(QUEUE *pq , struct logEntry *value)
         deQueue(pq, value);
 
     pq->qBase[pq->rear]->timeArrived = value->timeArrived;
-    printf("%" PRIu64 "\n\n",pq->qBase[pq->rear]->timeArrived);
-    printf("%" PRIu64 "\n\n",value->timeArrived);
+    //printf("%" PRIu64 "\n\n",pq->qBase[pq->rear]->timeArrived);
+    //printf("%" PRIu64 "\n\n",value->timeArrived);
     pq->qBase[pq->rear]->packet->msgLength = value->packet->msgLength;
     pq->qBase[pq->rear]->packet->msgType = value->packet->msgType;
     pq->qBase[pq->rear]->packet->code = value->packet->code;
