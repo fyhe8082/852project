@@ -93,7 +93,6 @@ void *thread_receive()
                     usec1 = 0; // start the transmission timer
 
                     /*** Recurring results Display Alarm timer setup *****/
-
                     tfrc_client.displaytimer.sa_handler = printruntime;
                     if (sigfillset(&tfrc_client.displaytimer.sa_mask) < 0)
                         DieWithError("sigfillset() failed");
@@ -164,7 +163,9 @@ void *thread_receive()
 					//	printf("%d+++++++++++++Other ack received!!\n", tfrc_client.R);
 					}					
  
-                    tfrc_client.t_RTO = fmax(4 * tfrc_client.R/MEG,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans);
+                   // tfrc_client.t_RTO = fmax(4 * tfrc_client.R/MEG,2*tfrc_client.msgSize*8.0/tfrc_client.X_trans); //RFC 5348
+                    tfrc_client.t_RTO = 4 * tfrc_client.R/MEG;  // RFC 3448
+
 
                     newsendingrate(); //calculate new sending rate
                     
