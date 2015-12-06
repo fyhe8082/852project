@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <unistd.h>//for ualarm()
 #include <inttypes.h> // for print uint64
 #include <sys/time.h>
 #include <stdbool.h>
@@ -297,7 +298,7 @@ void compute()
     I_tot = I_tot1;
     //printf("0%lf 1%lf\n\n", I_tot0, I_tot1);
     I_mean = I_tot/W_tot;
-    printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
+    //printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
     lossRate = (uint32_t)((1/I_mean)*1000);
 }
 
@@ -474,10 +475,10 @@ int main(int argc, char *argv[])
                         data = (struct data_t *)buffer;
                         data->RTT = ntohl(data->RTT);
                        // printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
-                        printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->seqNum, data->RTT, data->msgLength);
+                        //printf("timeStamp %lu, %d, %d, %d\n",data->timeStamp, data->seqNum, data->RTT, data->msgLength);
                        
                         if (RTT == 0)
-                            alarm((double)data->RTT/1000000);
+                            ualarm(data->RTT,0);
 						RTT = data->RTT;
                         //printf("data %" PRIu32 " received\n", data->seqNum);
                         //RTT = 1000000;//for test
@@ -485,7 +486,10 @@ int main(int argc, char *argv[])
                         enQueueAndCheck(data);
                         if(lossRate > preLossRate)
                         {
-                            alarm(0);
+                            printf("\nalarm now\n");
+                            ualarm(0,0);
+                            sendDataAck(sock, &clntAddr);
+                            ualarm(RTT,0);
                         }
                         //send each receive
                         //else sendDataAck(sock, &clntAddr);
@@ -521,10 +525,10 @@ void sigHandler(int sig)
 
 void handle_alarm(int ignored)
 {
-    //printf("enter alarm handler\n");
+    printf("enter alarm handler\n");
     if(bindFlag == 0)
         return;
     sendDataAck(sock, &clntAddr);
-    alarm((double)RTT/1000000);
+    ualarm(RTT,0);
     return;
 }
