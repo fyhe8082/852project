@@ -323,7 +323,7 @@ void compute()
     for (i=1;i<n;i++)
     {
         tempTot = ((double)array[i]*getWeight(i,n-1)/1000000);
-        if (tempTot < 1)
+        if (tempTot < 100)
         {
             I_tot0 = I_tot0 + tempTot;
             printf("Itot part%lf\n\n",tempTot);
@@ -456,7 +456,7 @@ int main(int argc, char *argv[])
                                 {
                                     bindFlag = 1;
                                     //init the record var
-                                    countRecv = 1;
+                                    countRecv = 0;
                                     countRecvBytes = recvMsgSize;
                                     seqMax = buffer->seqNum;
                                     seqMin = buffer->seqNum;
