@@ -118,7 +118,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     //printf("timeStamp recv%" PRIu64 "\n",data->timeStamp);
     dataAck->recvRate = htonl((uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT));
     printf("\nstart to send ack\n");
-    printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u\n\n", dataAck->ackNum, dataAck->timeStamp, dataAck->T_delay, dataAck->lossRate, dataAck->recvRate);
+    printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u\n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate));
 
     /* start to send.. */
     if (sendto(sock, dataAck, sizeof(struct ACK_t), 0, (struct sockaddr *)server, sizeof(*server) ) != sizeof(struct ACK_t))
