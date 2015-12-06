@@ -323,17 +323,17 @@ void compute()
     for (i=1;i<n;i++)
     {
         tempTot = ((double)array[i]*getWeight(i,n-1)/1000000);
-        if (tempTot < 1000000)
+        if (tempTot < 1000)
         {
             I_tot0 = I_tot0 + tempTot;
-            //printf("Itot part%lf\n\n",(double)array[i]*getWeight(i,n)/1000000);
+            printf("Itot part%lf\n\n",tempTot);
             W_tot = W_tot + getWeight(i,n);
         }
     }
     for (i=1;i<=n;i++)
         I_tot1 = I_tot1 + ((double)array[i]*getWeight(i-1,n)/1000000);
     //I_tot = max(I_tot0, I_tot1);
-    I_tot = I_tot1;
+    I_tot = I_tot0;
     //printf("0%lf 1%lf\n\n", I_tot0, I_tot1);
     I_mean = I_tot/W_tot;
     printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
