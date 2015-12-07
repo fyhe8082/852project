@@ -144,15 +144,16 @@ uint32_t getMaxSeqNum(QUEUE *pq,int index)
 {
     uint32_t m[4];
     int i = 0;
-    for(i=0;i<3;i++)
-    {
-        m[i] = 0;
-    }
     
     if(isemptyQueue(pq))
         return 0;
 
     int tail = pq->front;
+    for(i=0;i<4;i++)
+    {
+        m[i] = pq->qBase[tail]->packet->seqNum;
+    }
+
     while(tail != pq->rear)
     {   
         if((pq->qBase[tail])->packet->seqNum > m[0]){
