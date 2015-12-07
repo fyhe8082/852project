@@ -29,7 +29,8 @@ uint64_t get_time() {
 
 void initializeparams() {
 	tfrc_client.cntrlTimeout = 10; // cntrl pkts timeout = 10 sec
-	tfrc_client.cntrlTimeoutCounter = 0; 
+	tfrc_client.cntrlTimeoutCounter = 0;
+	tfrc_client.lossEventCounter = 0;
 	tfrc_client.X_trans = tfrc_client.msgSize;  //
 	tfrc_client.tld = 0;
 	tfrc_client.t_RTO = 2; // 2 secs 
