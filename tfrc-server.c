@@ -129,7 +129,7 @@ void sendDataAck(int sock,struct sockaddr_in *server)
     dataAck->recvRate = htonl((uint32_t)(getRecvBits(mylog, (data->timeStamp - RTT))*1000000/RTT));
     if (dataAck->recvRate == 0)
         return;
-    printf("\nstart to send ack\n");
+    //printf("\nstart to send ack\n");
     //printf("ackNum %u timeStamp %lu T_delay %u lossRate %u recvRate %u nowT %lu \n\n", ntohl(dataAck->ackNum), dataAck->timeStamp, ntohl(dataAck->T_delay), ntohl(dataAck->lossRate), ntohl(dataAck->recvRate), temp);
 
     /* start to send.. */
@@ -138,7 +138,8 @@ void sendDataAck(int sock,struct sockaddr_in *server)
         DieWithError("sendto() sent a different number of bytes than expected");
     }
     countAck++;
-    accuLossrate += ntohl(dataAck->lossRate)/1000;
+    accuLossrate += (double)lossRate/1000;
+    printf("\n%lf accuLossrate\n", accuLossrate);
     //printf("lossRate + dataAck->lossRate %lu\n\n", dataAck->lossRate);
 }
 
@@ -172,8 +173,8 @@ void updateLoss ()
     uint64_t T_loss;
 
     //if (higher==3)        add to lossRecord;
-    if (mylog->rear-1-3 <= mylog->front)
-        return;
+    //if (mylog->rear - mylog->front <4)
+    //    return;
 
     /*get the third biggest seqNum*/
     uint32_t num = getMaxSeqNum(mylog,3);
@@ -193,6 +194,7 @@ void updateLoss ()
             T_loss = T_lossCompute(i-1);
             append(&lossRecord, i-1, T_loss);
             countDroped++;
+            printf("%u lost\n\n", i-1);
             latestNum = i-1;
         }
         else{
@@ -312,7 +314,7 @@ void compute()
     /*compute the loss event rate*/
     int n;
     if (I_count > 8)
-        n = 8;
+        n = 9;
     else
         n = I_count;
     double I_tot0 = 0;
@@ -323,7 +325,7 @@ void compute()
     double tempTot;
     for (i=1;i<n;i++)
     {
-        tempTot = ((double)array[i]*getWeight(i,n-1)/1000000);
+        tempTot = ((double)array[i]*getWeight(i,n)/1000000);
         if (tempTot < 10000 && tempTot != 0)
         {
             I_tot0 = I_tot0 + tempTot;
@@ -337,7 +339,7 @@ void compute()
     I_tot = I_tot0;
     //printf("0%lf 1%lf\n\n", I_tot0, I_tot1);
     I_mean = I_tot/W_tot;
-    printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
+    //printf("I_mean %lf W_tot %lf I_tot %lf I_count %d", I_mean, W_tot, I_tot, I_count);
     lossRate = (uint32_t)((1/I_mean)*1000);
 }
 
@@ -495,7 +497,11 @@ int main(int argc, char *argv[])
                                     //display the output information
                                     display();
                                     ualarm(0,0);
+    mylog = (QUEUE *)malloc(sizeof(QUEUE));
+    initQueue(mylog);
+    lossRecord = (node_t *)malloc(sizeof(node_t));
                                     bindFlag = 0;
+
                                 }
                                 break;
                             }
@@ -511,7 +517,7 @@ int main(int argc, char *argv[])
                             && bindIP == clntAddr.sin_addr.s_addr
                             && bindPort == clntAddr.sin_port)
                     {
-    printf("The total packet loss : %lf\n",countDroped);
+    //printf("The total packet loss : %lf\n",countDroped);
         countRecv++;
         countRecvBytes += recvMsgSize;
                         data = (struct data_t *)buffer;
