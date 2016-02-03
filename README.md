@@ -1,3 +1,3 @@
-# 852project
+# A Client-Server Data Transferring Application Implemented TFRC Protocol 
 This is a class project of Internetworking.
-This is client branch.
+It is implemented as RFC3448.
